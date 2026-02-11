@@ -1,0 +1,37 @@
+name: cabinet_adelipnz
+description: Личный кабинет Адели Пенза
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # HTTP клиент
+  dio: ^5.4.0
+  # Для хранения токена
+  shared_preferences: ^2.2.2
+  # Управление состоянием
+  provider: ^6.1.1
+  # Для работы с URL
+  url_launcher: ^6.2.1
+  # Для удобной работы с датами
+  intl: ^0.18.1
+
+  # Иконки iOS стиля
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+
+  # Раскомментируйте если есть свои изображения
+  # assets:
+  #   - assets/images/
