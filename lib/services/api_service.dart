@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
   // URL вашего PHP бэкенда
-  static const String _baseUrl = 'https://cabinet.adelipnz.ru/api'; // ИЗМЕНИТЕ ЭТО!
+  static const String _baseUrl = 'https://cabinet.adelipnz.ru/api';
 
   final Dio _dio = Dio(BaseOptions(
     baseUrl: _baseUrl,
