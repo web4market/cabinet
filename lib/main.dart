@@ -10,18 +10,101 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Кабинет Адели',
-      theme: ThemeData(primarySwatch: Colors.blue),
-      home: FutureBuilder(
-        future: ApiService.getToken(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return Scaffold(body: Center(child: CircularProgressIndicator()));
-          }
-          if (snapshot.hasData && snapshot.data != null) {
-            return MainMenuScreen();
-          }
-          return LoginScreen();
-        },
+      theme: ThemeData(
+        primarySwatch: Colors.blue,
+        visualDensity: VisualDensity.adaptivePlatformDensity,
+      ),
+      home: SplashScreen(),
+    );
+  }
+}
+
+class SplashScreen extends StatefulWidget {
+  @override
+  _SplashScreenState createState() => _SplashScreenState();
+}
+
+class _SplashScreenState extends State<SplashScreen> {
+  final ApiService _apiService = ApiService();
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuth();
+  }
+
+  Future<void> _checkAuth() async {
+    // Небольшая задержка для показа сплэша
+    await Future.delayed(Duration(seconds: 1));
+
+    if (!mounted) return;
+
+    // Проверяем, есть ли токен и валиден ли он
+    final token = await ApiService.getToken();
+
+    if (token != null) {
+      final isValid = await _apiService.checkToken();
+      if (isValid && mounted) {
+        // Токен валиден - переходим в меню
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MainMenuScreen()),
+        );
+        return;
+      }
+    }
+
+    // Токена нет или он недействителен - на экран входа
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => LoginScreen()),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.blue.shade50, Colors.white],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 120,
+                height: 120,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.school,
+                  size: 60,
+                  color: Colors.white,
+                ),
+              ),
+              SizedBox(height: 32),
+              Text(
+                'Личный кабинет',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade800,
+                ),
+              ),
+              SizedBox(height: 16),
+              CircularProgressIndicator(color: Colors.blue),
+            ],
+          ),
+        ),
       ),
     );
   }
