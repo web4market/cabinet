@@ -107,4 +107,205 @@ class ApiService {
       await deleteToken();
     }
   }
+  // Добавляем в класс ApiService:
+
+  // ПОЛУЧЕНИЕ ПРОФИЛЯ
+  Future<Map<String, dynamic>> getProfile() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Не авторизован',
+          'needAuth': true
+        };
+      }
+
+      final response = await _dio.get(
+        '/profile',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      return response.data;
+
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await deleteToken();
+        return {
+          'success': false,
+          'message': 'Сессия истекла',
+          'needAuth': true
+        };
+      }
+
+      return {
+        'success': false,
+        'message': 'Ошибка загрузки профиля'
+      };
+    }
+  }
+
+  // ОБНОВЛЕНИЕ ПРОФИЛЯ
+  Future<Map<String, dynamic>> updateProfile({
+    String? name,
+    String? email,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Не авторизован',
+          'needAuth': true
+        };
+      }
+
+      final Map<String, dynamic> data = {};
+      if (name != null) data['name'] = name;
+      if (email != null) data['email'] = email;
+
+      if (data.isEmpty) {
+        return {
+          'success': false,
+          'message': 'Нет данных для обновления'
+        };
+      }
+
+      final response = await _dio.put(
+        '/profile',
+        data: data,
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      return response.data;
+
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': 'Ошибка обновления профиля'
+      };
+    }
+  }
+
+  // ПОЛУЧЕНИЕ РАСПИСАНИЯ
+  Future<Map<String, dynamic>> getSchedule({
+    String? dateFrom,
+    String? dateTo,
+    String period = 'all',
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Не авторизован',
+          'needAuth': true
+        };
+      }
+
+      final response = await _dio.get(
+        '/schedule',
+        queryParameters: {
+          'period': period,
+          if (dateFrom != null) 'date_from': dateFrom,
+          if (dateTo != null) 'date_to': dateTo,
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      return response.data;
+
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        await deleteToken();
+        return {
+          'success': false,
+          'message': 'Сессия истекла',
+          'needAuth': true
+        };
+      }
+
+      return {
+        'success': false,
+        'message': 'Ошибка загрузки расписания'
+      };
+    }
+  }
+
+  // Лучше использовать JSON формат
+  Future<Map<String, dynamic>> getScheduleJson({
+    String? dateFrom,
+    String? dateTo,
+    String period = 'all',
+  }) async {
+    try {
+      final token = await getToken();
+
+      Map<String, String> queryParams = {
+        'period': period,
+        'format': 'json' // Запрашиваем JSON
+      };
+
+      if (dateFrom != null) queryParams['date_from'] = dateFrom;
+      if (dateTo != null) queryParams['date_to'] = dateTo;
+
+      final response = await _dio.get(
+        '/schedule',
+        queryParameters: queryParams,
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      return response.data;
+
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': 'Ошибка загрузки расписания'
+      };
+    }
+  }
+
+  // СМЕНА ПАРОЛЯ
+  Future<Map<String, dynamic>> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Не авторизован',
+          'needAuth': true
+        };
+      }
+
+      final response = await _dio.post(
+        '/profile/change-password',
+        data: {
+          'current_password': currentPassword,
+          'new_password': newPassword,
+        },
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      return response.data;
+
+    } on DioException catch (e) {
+      return {
+        'success': false,
+        'message': 'Ошибка смены пароля'
+      };
+    }
+  }
 }
