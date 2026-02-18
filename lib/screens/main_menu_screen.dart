@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../widgets/menu_card.dart';
 import 'login_screen.dart';
-import 'profile_screen.dart'; // Добавляем импорт профиля
-import 'schedule_screen.dart'; // Добавляем импорт расписания
+import 'profile_screen.dart';
+import 'daily_schedule_screen.dart'; // Добавляем импорт расписания
 
 class MainMenuScreen extends StatelessWidget {
   void _logout(BuildContext context) async {
@@ -133,15 +133,16 @@ class MainMenuScreen extends StatelessWidget {
               ),
 
               // Карточки меню
+
               MenuCard(
                 icon: Icons.calendar_month,
                 title: 'Расписание занятий',
-                description: 'Просмотр расписания на неделю и месяц',
+                description: 'Расписание на сегодня',
                 color: Colors.blue,
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => ScheduleScreen()),
+                    MaterialPageRoute(builder: (_) => DailyScheduleScreen()),
                   );
                 },
               ),

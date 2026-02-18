@@ -53,7 +53,11 @@ class ApiService {
         if (data['success'] == true) {
           final token = data['data']['token'];
           await saveToken(token);
-          return {'success': true, 'token': token, 'user': data['data']['user']};
+          return {
+            'success': true,
+            'token': token,
+            'user': data['data']['user']
+          };
         } else {
           return {'success': false, 'error': data['message']};
         }
@@ -108,6 +112,7 @@ class ApiService {
       await deleteToken();
     }
   }
+
   // Добавляем в класс ApiService:
 
   // ПОЛУЧЕНИЕ ПРОФИЛЯ
@@ -120,7 +125,9 @@ class ApiService {
       print('🔍 getProfile() START');
 
       final token = await getToken();
-      print('📌 Токен: ${token != null ? token.substring(0, 20) + "..." : "NULL"}');
+      print('📌 Токен: ${token != null
+          ? token.substring(0, 20) + "..."
+          : "NULL"}');
 
       if (token == null) {
         print('❌ Токен отсутствует');
@@ -184,7 +191,6 @@ class ApiService {
         'success': false,
         'message': 'Неизвестный формат ответа'
       };
-
     } on DioException catch (e) {
       print('❌ DIO ОШИБКА:');
       print('   Тип: ${e.type}');
@@ -251,58 +257,10 @@ class ApiService {
       );
 
       return response.data;
-
     } on DioException catch (e) {
       return {
         'success': false,
         'message': 'Ошибка обновления профиля'
-      };
-    }
-  }
-
-  // ПОЛУЧЕНИЕ РАСПИСАНИЯ
-  Future<Map<String, dynamic>> getSchedule({
-    String? dateFrom,
-    String? dateTo,
-    String period = 'all',
-  }) async {
-    try {
-      final token = await getToken();
-      if (token == null) {
-        return {
-          'success': false,
-          'message': 'Не авторизован',
-          'needAuth': true
-        };
-      }
-
-      final response = await _dio.get(
-        '/schedule',
-        queryParameters: {
-          'period': period,
-          if (dateFrom != null) 'date_from': dateFrom,
-          if (dateTo != null) 'date_to': dateTo,
-        },
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      );
-
-      return response.data;
-
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        await deleteToken();
-        return {
-          'success': false,
-          'message': 'Сессия истекла',
-          'needAuth': true
-        };
-      }
-
-      return {
-        'success': false,
-        'message': 'Ошибка загрузки расписания'
       };
     }
   }
@@ -333,7 +291,6 @@ class ApiService {
       );
 
       return response.data;
-
     } on DioException catch (e) {
       return {
         'success': false,
@@ -369,7 +326,6 @@ class ApiService {
       );
 
       return response.data;
-
     } on DioException catch (e) {
       return {
         'success': false,
