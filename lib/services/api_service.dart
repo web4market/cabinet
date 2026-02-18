@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert'; // для jsonDecode и jsonEncode
 
 class ApiService {
   // URL вашего PHP бэкенда
@@ -112,6 +113,8 @@ class ApiService {
   // ПОЛУЧЕНИЕ ПРОФИЛЯ
 // lib/services/api_service.dart - добавьте отладку в метод getProfile()
 
+  // lib/services/api_service.dart - исправленный метод getProfile
+
   Future<Map<String, dynamic>> getProfile() async {
     try {
       print('🔍 getProfile() START');
@@ -138,22 +141,56 @@ class ApiService {
             'Authorization': 'Bearer $token',
             'Accept': 'application/json'
           },
+          responseType: ResponseType.json, // Явно указываем тип ответа
         ),
       );
 
       print('📥 Статус ответа: ${response.statusCode}');
-      print('📥 Заголовки ответа: ${response.headers}');
-      print('📥 Тело ответа: ${response.data}');
+      print('📥 Заголовки ответа: ${response.headers.map}');
 
-      return response.data;
+      // ПРИНУДИТЕЛЬНО выводим данные
+      print('📥 Тип данных: ${response.data.runtimeType}');
+      print('📥 Данные (сырые): $response');
+      print('📥 response.data: ${response.data}');
+
+      if (response.data == null) {
+        print('❌ response.data = null');
+        return {
+          'success': false,
+          'message': 'Пустой ответ от сервера'
+        };
+      }
+
+      // Пробуем распарсить
+      if (response.data is Map) {
+        print('✅ Данные в формате Map');
+        return response.data as Map<String, dynamic>;
+      } else if (response.data is String) {
+        print('📥 Данные в формате String, пробуем распарсить...');
+        try {
+          final Map<String, dynamic> parsed = jsonDecode(response.data);
+          print('✅ JSON распарсен успешно');
+          return parsed;
+        } catch (e) {
+          print('❌ Ошибка парсинга JSON: $e');
+          return {
+            'success': false,
+            'message': 'Ошибка формата данных: $e'
+          };
+        }
+      }
+
+      return {
+        'success': false,
+        'message': 'Неизвестный формат ответа'
+      };
 
     } on DioException catch (e) {
       print('❌ DIO ОШИБКА:');
       print('   Тип: ${e.type}');
       print('   Статус: ${e.response?.statusCode}');
       print('   Сообщение: ${e.message}');
-      print('   URL: ${e.requestOptions.uri}');
-      print('   Ответ сервера: ${e.response?.data}');
+      print('   Данные ошибки: ${e.response?.data}');
 
       if (e.response?.statusCode == 401) {
         await deleteToken();
@@ -170,6 +207,7 @@ class ApiService {
       };
     } catch (e) {
       print('❌ Неизвестная ошибка: $e');
+      print('   Тип ошибки: ${e.runtimeType}');
       return {
         'success': false,
         'message': 'Неизвестная ошибка: $e'
