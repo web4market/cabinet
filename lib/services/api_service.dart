@@ -110,10 +110,17 @@ class ApiService {
   // Добавляем в класс ApiService:
 
   // ПОЛУЧЕНИЕ ПРОФИЛЯ
+// lib/services/api_service.dart - добавьте отладку в метод getProfile()
+
   Future<Map<String, dynamic>> getProfile() async {
     try {
+      print('🔍 getProfile() START');
+
       final token = await getToken();
+      print('📌 Токен: ${token != null ? token.substring(0, 20) + "..." : "NULL"}');
+
       if (token == null) {
+        print('❌ Токен отсутствует');
         return {
           'success': false,
           'message': 'Не авторизован',
@@ -121,16 +128,33 @@ class ApiService {
         };
       }
 
+      print('📤 Отправка запроса на /profile');
+      print('📤 Headers: Authorization: Bearer ${token.substring(0, 20)}...');
+
       final response = await _dio.get(
         '/profile',
         options: Options(
-          headers: {'Authorization': 'Bearer $token'},
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json'
+          },
         ),
       );
+
+      print('📥 Статус ответа: ${response.statusCode}');
+      print('📥 Заголовки ответа: ${response.headers}');
+      print('📥 Тело ответа: ${response.data}');
 
       return response.data;
 
     } on DioException catch (e) {
+      print('❌ DIO ОШИБКА:');
+      print('   Тип: ${e.type}');
+      print('   Статус: ${e.response?.statusCode}');
+      print('   Сообщение: ${e.message}');
+      print('   URL: ${e.requestOptions.uri}');
+      print('   Ответ сервера: ${e.response?.data}');
+
       if (e.response?.statusCode == 401) {
         await deleteToken();
         return {
@@ -142,10 +166,17 @@ class ApiService {
 
       return {
         'success': false,
-        'message': 'Ошибка загрузки профиля'
+        'message': 'Ошибка загрузки профиля: ${e.message}'
+      };
+    } catch (e) {
+      print('❌ Неизвестная ошибка: $e');
+      return {
+        'success': false,
+        'message': 'Неизвестная ошибка: $e'
       };
     }
   }
+
 
   // ОБНОВЛЕНИЕ ПРОФИЛЯ
   Future<Map<String, dynamic>> updateProfile({
