@@ -1,3 +1,5 @@
+// lib/models/daily_schedule_model.dart - исправленная версия
+
 class DailySchedule {
   final int id;
   final String title;
@@ -21,6 +23,8 @@ class DailySchedule {
       activitiesList = (json['activities'] as List)
           .map((item) => Activity.fromJson(item))
           .toList();
+
+      print('📦 Загружено ${activitiesList.length} активностей');
     }
 
     return DailySchedule(
@@ -30,6 +34,55 @@ class DailySchedule {
       userId: json['frontuser'] ?? 0,
       activities: activitiesList,
     );
+  }
+
+  // Получаем даты из заголовка расписания
+  List<String> get dates {
+    // Пример: "Расписание 18.02.2026 - 20.02.2026 для пациента: ..."
+    final regex = RegExp(r'(\d{2}\.\d{2}\.\d{4})');
+    final matches = regex.allMatches(title).toList();
+    return matches.map((m) => m.group(1) ?? '').where((d) => d.isNotEmpty).toList();
+  }
+
+  // Получаем имя пациента из заголовка
+  String get patientName {
+    final parts = title.split('для пациента: ');
+    if (parts.length > 1) {
+      return parts[1].trim();
+    }
+    return 'Пациент';
+  }
+
+  // Группируем активности по дням
+  Map<String, List<Activity>> get activitiesByDay {
+    final grouped = <String, List<Activity>>{};
+
+    // В данных нет явного разделения по дням, используем id_cell для определения дня
+    // id_cell: 1001-1999 - день 1, 2001-2999 - день 2, 3001-3999 - день 3
+    for (var activity in activities) {
+      String day;
+      if (activity.cellId >= 1001 && activity.cellId <= 1999) {
+        day = 'День 1';
+      } else if (activity.cellId >= 2001 && activity.cellId <= 2999) {
+        day = 'День 2';
+      } else if (activity.cellId >= 3001 && activity.cellId <= 3999) {
+        day = 'День 3';
+      } else {
+        day = 'День ${activity.cellId ~/ 1000}';
+      }
+
+      if (!grouped.containsKey(day)) {
+        grouped[day] = [];
+      }
+      grouped[day]!.add(activity);
+    }
+
+    // Сортируем активности в каждом дне по времени
+    grouped.forEach((key, list) {
+      list.sort((a, b) => a.startTime.compareTo(b.startTime));
+    });
+
+    return grouped;
   }
 }
 
@@ -73,31 +126,20 @@ class Activity {
     );
   }
 
-  // Форматированное время
   String get timeRange => '$startTime - $endTime';
-
-  // Длительность в минутах
   String get durationText => '$duration мин';
 
-  // Извлекаем кабинет из textincell или description
   String get room {
     final text = textInCell.isNotEmpty ? textInCell : description;
-    final lines = text.split('\n');
-    if (lines.isNotEmpty) {
-      // Первая строка часто содержит кабинет
-      return lines[0].trim();
-    }
+    final lines = text.split('\n').where((line) => line.trim().isNotEmpty).toList();
+    if (lines.isNotEmpty) return lines[0].trim();
     return 'Кабинет не указан';
   }
 
-  // Извлекаем специалиста
   String get specialist {
     final text = textInCell.isNotEmpty ? textInCell : description;
-    final lines = text.split('\n');
-    if (lines.length > 1) {
-      // Вторая строка часто содержит имя специалиста
-      return lines[1].trim();
-    }
+    final lines = text.split('\n').where((line) => line.trim().isNotEmpty).toList();
+    if (lines.length > 1) return lines[1].trim();
     return 'Специалист не указан';
   }
 }

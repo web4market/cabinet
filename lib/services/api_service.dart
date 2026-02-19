@@ -265,40 +265,6 @@ class ApiService {
     }
   }
 
-  // Лучше использовать JSON формат
-  Future<Map<String, dynamic>> getScheduleJson({
-    String? dateFrom,
-    String? dateTo,
-    String period = 'all',
-  }) async {
-    try {
-      final token = await getToken();
-
-      Map<String, String> queryParams = {
-        'period': period,
-        'format': 'json' // Запрашиваем JSON
-      };
-
-      if (dateFrom != null) queryParams['date_from'] = dateFrom;
-      if (dateTo != null) queryParams['date_to'] = dateTo;
-
-      final response = await _dio.get(
-        '/schedule',
-        queryParameters: queryParams,
-        options: Options(
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      );
-
-      return response.data;
-    } on DioException catch (e) {
-      return {
-        'success': false,
-        'message': 'Ошибка загрузки расписания'
-      };
-    }
-  }
-
   // СМЕНА ПАРОЛЯ
   Future<Map<String, dynamic>> changePassword({
     required String currentPassword,
@@ -333,4 +299,192 @@ class ApiService {
       };
     }
   }
+  // ПОЛУЧЕНИЕ РАСПИСАНИЯ - ИСПРАВЛЕННАЯ ВЕРСИЯ
+  Future<Map<String, dynamic>> getSchedule() async {
+    try {
+      print('🔍 getSchedule() START');
+
+      final token = await getToken();
+      if (token == null) {
+        print('❌ Токен отсутствует');
+        return {
+          'success': false,
+          'message': 'Не авторизован',
+          'needAuth': true
+        };
+      }
+
+      print('📤 Запрос к /api/schedule');
+      print('📤 Headers: Authorization: Bearer ${token.substring(0, 20)}...');
+
+      final response = await _dio.get(
+        '/schedule',  // Простой запрос без параметров
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      print('📥 Статус ответа: ${response.statusCode}');
+      print('📥 Тип данных: ${response.data.runtimeType}');
+      print('📥 Данные: ${response.data}');
+
+      if (response.statusCode == 200) {
+        if (response.data is Map) {
+          final data = response.data as Map<String, dynamic>;
+          print('📊 success: ${data['success']}');
+          print('📊 total: ${data['total']}');
+
+          if (data['data'] is List) {
+            print('📊 data длина: ${(data['data'] as List).length}');
+          }
+
+          return data;
+        } else if (response.data is String) {
+          try {
+            final parsed = jsonDecode(response.data);
+            return parsed as Map<String, dynamic>;
+          } catch (e) {
+            print('❌ Ошибка парсинга JSON: $e');
+            return {
+              'success': false,
+              'message': 'Ошибка формата данных'
+            };
+          }
+        }
+      }
+
+      return {
+        'success': false,
+        'message': 'Ошибка загрузки расписания'
+      };
+
+    } on DioException catch (e) {
+      print('❌ DIO Ошибка: ${e.message}');
+      if (e.response?.statusCode == 401) {
+        await deleteToken();
+        return {
+          'success': false,
+          'message': 'Сессия истекла',
+          'needAuth': true
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Ошибка соединения: ${e.message}'
+      };
+    } catch (e) {
+      print('❌ Неизвестная ошибка: $e');
+      return {
+        'success': false,
+        'message': 'Ошибка: $e'
+      };
+    }
+  }
+// lib/services/api_service.dart - добавьте эти методы
+
+  // ПОЛУЧЕНИЕ ВСЕХ КУРСОВ
+  Future<Map<String, dynamic>> getCourses() async {
+    try {
+      print('🔍 getCourses() START');
+
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Не авторизован',
+          'needAuth': true
+        };
+      }
+
+      print('📤 Запрос к /api/courses');
+
+      final response = await _dio.get(
+        '/courses',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json'
+          },
+        ),
+      );
+
+      print('📥 Статус: ${response.statusCode}');
+      print('📥 Данные: ${response.data}');
+
+      return response.data;
+
+    } on DioException catch (e) {
+      print('❌ Ошибка: ${e.message}');
+      if (e.response?.statusCode == 401) {
+        await deleteToken();
+        return {
+          'success': false,
+          'message': 'Сессия истекла',
+          'needAuth': true
+        };
+      }
+      return {
+        'success': false,
+        'message': 'Ошибка загрузки курсов'
+      };
+    }
+  }
+
+
+
+
+
+  // ПОЛУЧЕНИЕ СТАТИСТИКИ КУРСОВ
+  Future<Map<String, dynamic>> getCoursesStats() async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'Не авторизован'};
+      }
+
+      final response = await _dio.get(
+        '/courses/stats',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      return response.data;
+
+    } catch (e) {
+      return {'success': false, 'message': 'Ошибка загрузки статистики'};
+    }
+  }
+
+  // ПОЛУЧЕНИЕ КОНКРЕТНОГО КУРСА
+  Future<Map<String, dynamic>> getCourseById(int courseId) async {
+    try {
+      final token = await getToken();
+      if (token == null) {
+        return {'success': false, 'message': 'Не авторизован'};
+      }
+
+      final response = await _dio.get(
+        '/courses/$courseId',
+        options: Options(
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+
+      return response.data;
+
+    } catch (e) {
+      return {'success': false, 'message': 'Ошибка загрузки курса'};
+    }
+  }
+
+
+
+
+
+
+
 }

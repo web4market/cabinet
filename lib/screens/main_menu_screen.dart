@@ -3,7 +3,8 @@ import '../services/api_service.dart';
 import '../widgets/menu_card.dart';
 import 'login_screen.dart';
 import 'profile_screen.dart';
-import 'daily_schedule_screen.dart'; // Добавляем импорт расписания
+import 'schedule_screen.dart';
+import 'courses_screen.dart';
 
 class MainMenuScreen extends StatelessWidget {
   void _logout(BuildContext context) async {
@@ -134,15 +135,17 @@ class MainMenuScreen extends StatelessWidget {
 
               // Карточки меню
 
+              // lib/screens/main_menu_screen.dart - обновите переход на расписание
+
               MenuCard(
                 icon: Icons.calendar_month,
                 title: 'Расписание занятий',
-                description: 'Расписание на сегодня',
+                description: 'Просмотр расписания',
                 color: Colors.blue,
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (_) => DailyScheduleScreen()),
+                    MaterialPageRoute(builder: (_) => ScheduleScreen()),
                   );
                 },
               ),
@@ -150,19 +153,16 @@ class MainMenuScreen extends StatelessWidget {
               MenuCard(
                 icon: Icons.school,
                 title: 'Назначенные курсы',
-                description: 'Список ваших курсов и прогресс обучения',
+                description: 'Список ваших курсов и прогресс',
                 color: Colors.green,
                 onTap: () {
-                  // TODO: Реализовать экран курсов
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Раздел "Курсы" в разработке'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => CoursesScreen()),
                   );
                 },
               ),
-
+/*
               MenuCard(
                 icon: Icons.assignment,
                 title: 'Заполнить анкету',
@@ -178,7 +178,7 @@ class MainMenuScreen extends StatelessWidget {
                   );
                 },
               ),
-
+*/
             ],
           ),
         ),

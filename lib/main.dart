@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_menu_screen.dart';
 import 'services/api_service.dart';
+import 'package:flutter/services.dart' show rootBundle;
 
+void checkAsset() async {
+  try {
+    await rootBundle.load('assets/images/Adeli-logo101.png');
+    print('✅ Логотип найден');
+  } catch (e) {
+    print('❌ Логотип не найден: $e');
+  }
+}
 void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {

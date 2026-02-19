@@ -126,25 +126,28 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Логотип
+                    // Логотип Адели вместо иконки
                     Container(
-                      width: 120,
-                      height: 120,
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.blue.withOpacity(0.3),
-                            blurRadius: 20,
-                            offset: Offset(0, 10),
-                          ),
-                        ],
-                      ),
-                      child: Icon(
-                        Icons.school,
-                        size: 60,
-                        color: Colors.white,
+                      width: 250,
+                      height: 150,
+
+                      child: ClipOval(
+                        child: Image.asset(
+                          'assets/images/Adeli-logo101.png',
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            print('❌ Ошибка загрузки логотипа: $error');
+                            // Если изображение не загрузилось, показываем иконку
+                            return Container(
+                              color: Colors.blue,
+                              child: Icon(
+                                Icons.diversity_3,
+                                size: 60,
+                                color: Colors.white,
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                     SizedBox(height: 40),
