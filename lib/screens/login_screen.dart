@@ -98,13 +98,13 @@ class _LoginScreenState extends State<LoginScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade50, Colors.white],
+            colors: [Colors.grey.shade50, Colors.white],
           ),
         ),
         child: SafeArea(
           child: Center(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
+              padding: const EdgeInsets.all(20.0),
               child: Form(
                 key: _formKey,
                 child: Column(
@@ -112,11 +112,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     // Логотип
                     Container(
-                      width: 350,
-                      height: 250,
+                      width: 250,
+                      height: 150,
                       child: Image.asset(
                           'assets/images/Adeli-logo101.png',
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.blue,
