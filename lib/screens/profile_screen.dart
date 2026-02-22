@@ -168,6 +168,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
           tabs: [
             Tab(icon: Icon(Icons.person), text: 'Профиль'),
             Tab(icon: Icon(Icons.lock), text: 'Безопасность'),
+            Tab(icon: Icon(Icons.family_restroom), text: 'Подопечные'),
           ],
         ),
         actions: [
@@ -192,6 +193,7 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
         children: [
           _buildProfileTab(),
           _buildSecurityTab(),
+          _buildChildrenTab(),
         ],
       ),
     );
@@ -381,12 +383,6 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
                         fontSize: 12,
                         color: Colors.grey.shade600,
                       ),
-                    ),
-                    Text(
-                      _user?.createdAt != null
-                          ? '${_user!.createdAt!.day}.${_user!.createdAt!.month}.${_user!.createdAt!.year}'
-                          : 'Неизвестно',
-                      style: TextStyle(fontSize: 14),
                     ),
                   ],
                 ),
@@ -635,6 +631,124 @@ class _ProfileScreenState extends State<ProfileScreen> with SingleTickerProvider
       ),
     );
   }
+
+  Widget _buildChildrenTab() {
+    if (_user == null) {
+      return Center(child: Text('Данные не загружены'));
+    }
+
+    if (_user!.children.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.family_restroom, size: 64, color: Colors.grey.shade400),
+            SizedBox(height: 16),
+            Text(
+              'Нет добавленных подопечных',
+              style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: _user!.children.length,
+      itemBuilder: (context, index) {
+        final child = _user!.children[index];
+        return Card(
+          margin: EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      backgroundColor: Colors.blue.shade100,
+                      child: Text(
+                        child.name.substring(0, 1).toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.blue.shade800,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            child.name,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            child.relationText,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12),
+                Divider(),
+                SizedBox(height: 8),
+                Row(
+                  children: [
+                    Icon(Icons.cake, size: 16, color: Colors.grey.shade600),
+                    SizedBox(width: 8),
+                    Text(
+                      'Дата рождения: ${child.formattedBirthDate}',
+                      style: TextStyle(fontSize: 14),
+                    ),
+                  ],
+                ),
+                if (child.age != null) ...[
+                  SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.auto_awesome, size: 16, color: Colors.grey.shade600),
+                      SizedBox(width: 8),
+                      Text(
+                        'Возраст: ${child.age} ${_getAgeWord(child.age!)}',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _getAgeWord(int age) {
+    if (age % 10 == 1 && age % 100 != 11) {
+      return 'год';
+    } else if (age % 10 >= 2 && age % 10 <= 4 && (age % 100 < 10 || age % 100 >= 20)) {
+      return 'года';
+    } else {
+      return 'лет';
+    }
+  }
+
+
 
   @override
   void dispose() {

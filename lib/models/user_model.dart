@@ -1,83 +1,121 @@
+import 'package:flutter/material.dart';
+
 class UserModel {
   final int id;
   final String username;
   final String? email;
   final String? name;
-  final DateTime? createdAt;
   final DateTime? lastLogin;
+  final List<ChildModel> children;
 
   UserModel({
     required this.id,
     required this.username,
     this.email,
     this.name,
-    this.createdAt,
     this.lastLogin,
+    required this.children,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
-    print('🔧 UserModel.fromJson: $json');
+    print('📦 UserModel.fromJson: $json');
 
-    // Пробуем разные варианты получения данных
-    // Вариант 1: данные прямо в корне
-    if (json.containsKey('id')) {
-      return UserModel(
-        id: _parseInt(json['id']),
-        username: json['username']?.toString() ?? '',
-        email: json['email']?.toString(),
-        name: json['name']?.toString(),
-        createdAt: _parseDate(json['created_at']),
-        lastLogin: _parseDate(json['last_login']),
-      );
-    }
-
-    // Вариант 2: данные в поле 'data'
-    if (json.containsKey('data') && json['data'] is Map) {
-      final data = json['data'] as Map<String, dynamic>;
-      return UserModel(
-        id: _parseInt(data['id']),
-        username: data['username']?.toString() ?? '',
-        email: data['email']?.toString(),
-        name: data['name']?.toString(),
-        createdAt: _parseDate(data['created_at']),
-        lastLogin: _parseDate(data['last_login']),
-      );
-    }
-
-    // Если ничего не подошло
-    print('❌ Неизвестный формат JSON: $json');
-    throw FormatException('Неверный формат данных пользователя');
-  }
-
-  static int _parseInt(dynamic value) {
-    if (value == null) return 0;
-    if (value is int) return value;
-    if (value is String) return int.tryParse(value) ?? 0;
-    return 0;
-  }
-
-  static DateTime? _parseDate(dynamic value) {
-    if (value == null) return null;
-    if (value is DateTime) return value;
-    if (value is String) {
-      try {
-        return DateTime.parse(value);
-      } catch (e) {
-        print('⚠️ Ошибка парсинга даты: $value');
-        return null;
+    // Безопасное преобразование id
+    int userId = 0;
+    if (json['id'] != null) {
+      if (json['id'] is int) {
+        userId = json['id'];
+      } else if (json['id'] is String) {
+        userId = int.tryParse(json['id']) ?? 0;
       }
     }
-    return null;
+
+    // Парсим детей
+    List<ChildModel> childrenList = [];
+    if (json['children'] != null && json['children'] is List) {
+      childrenList = (json['children'] as List)
+          .map((c) => ChildModel.fromJson(c))
+          .toList();
+    }
+
+    return UserModel(
+      id: userId,
+      username: json['username']?.toString() ?? '',
+      email: json['email']?.toString(),
+      name: json['name']?.toString(),
+      lastLogin: json['last_login'] != null
+          ? DateTime.tryParse(json['last_login'])
+          : null,
+      children: childrenList,
+    );
+  }
+}
+
+class ChildModel {
+  final int id;
+  final String name;
+  final String? birthDate;
+  final String? relation;
+
+  ChildModel({
+    required this.id,
+    required this.name,
+    this.birthDate,
+    this.relation,
+  });
+
+  factory ChildModel.fromJson(Map<String, dynamic> json) {
+    return ChildModel(
+      id: json['id'] ?? 0,
+      name: json['name']?.toString() ?? '',
+      birthDate: json['birth_date']?.toString(),
+      relation: json['relation']?.toString(),
+    );
   }
 
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'username': username,
-      'email': email,
-      'name': name,
-      'created_at': createdAt?.toIso8601String(),
-      'last_login': lastLogin?.toIso8601String(),
-    };
+  // Форматированная дата рождения
+  String get formattedBirthDate {
+    if (birthDate == null) return 'Не указана';
+    try {
+      final date = DateTime.parse(birthDate!);
+      return '${date.day}.${date.month}.${date.year}';
+    } catch (e) {
+      return birthDate!;
+    }
+  }
+
+  // Отношения на русском
+  String get relationText {
+    switch (relation?.toLowerCase()) {
+      case 'mother':
+        return 'Мать';
+      case 'father':
+        return 'Отец';
+      case 'grandmother':
+        return 'Бабушка';
+      case 'grandfather':
+        return 'Дедушка';
+      case 'guardian':
+        return 'Опекун';
+      default:
+        return relation ?? 'Родственник';
+    }
+  }
+
+  // Возраст
+  int? get age {
+    if (birthDate == null) return null;
+    try {
+      final birth = DateTime.parse(birthDate!);
+      final today = DateTime.now();
+      int age = today.year - birth.year;
+      if (today.month < birth.month ||
+          (today.month == birth.month && today.day < birth.day)) {
+        age--;
+      }
+      return age;
+    } catch (e) {
+      return null;
+    }
   }
 }

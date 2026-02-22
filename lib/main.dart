@@ -88,17 +88,24 @@ class _SplashScreenState extends State<SplashScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Container(
-                width: 120,
-                height: 120,
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  Icons.school,
-                  size: 60,
-                  color: Colors.white,
-                ),
+                width: 250,
+                height: 150,
+                  child: Image.asset(
+                    'assets/images/Adeli-logo101.png',
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      print('❌ Ошибка загрузки логотипа: $error');
+                      // Если изображение не загрузилось, показываем иконку
+                      return Container(
+                        color: Colors.blue,
+                        child: Icon(
+                          Icons.diversity_3,
+                          size: 60,
+                          color: Colors.white,
+                        ),
+                      );
+                    },
+                  ),
               ),
               SizedBox(height: 32),
               Text(

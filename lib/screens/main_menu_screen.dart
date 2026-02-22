@@ -5,6 +5,7 @@ import 'login_screen.dart';
 import 'profile_screen.dart';
 import 'schedule_screen.dart';
 import 'courses_screen.dart';
+import 'help_screen.dart';
 
 class MainMenuScreen extends StatelessWidget {
   void _logout(BuildContext context) async {
@@ -159,6 +160,19 @@ class MainMenuScreen extends StatelessWidget {
                   Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => CoursesScreen()),
+                  );
+                },
+              ),
+
+              MenuCard(
+                icon: Icons.help_outline,
+                title: 'Помощь',
+                description: 'Руководство пользователя',
+                color: Colors.purple,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => HelpScreen()),
                   );
                 },
               ),

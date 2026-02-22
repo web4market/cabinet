@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import '../services/api_service.dart';
 import 'main_menu_screen.dart';
+import 'help_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -15,6 +15,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _rememberMe = false;
   String? _errorMessage;
 
   final _formKey = GlobalKey<FormState>();
@@ -22,29 +23,24 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   void initState() {
     super.initState();
-    // Проверяем, может уже есть сохраненный токен
-    _checkExistingToken();
+    _loadSavedLogin();
   }
 
-  Future<void> _checkExistingToken() async {
-    final token = await ApiService.getToken();
-    if (token != null) {
-      // Проверяем, валиден ли токен
-      final isValid = await _apiService.checkToken();
-      if (isValid && mounted) {
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => MainMenuScreen()),
-        );
-      }
+  Future<void> _loadSavedLogin() async {
+    final savedLogin = await ApiService.getLastLogin();
+    final shouldRemember = await ApiService.shouldRemember();
+
+    if (savedLogin != null && savedLogin.isNotEmpty) {
+      setState(() {
+        _loginController.text = savedLogin;
+        _rememberMe = shouldRemember;
+      });
     }
   }
 
   void _login() async {
-    // Скрываем клавиатуру
     FocusScope.of(context).unfocus();
 
-    // Валидация формы
     if (!_formKey.currentState!.validate()) {
       return;
     }
@@ -55,30 +51,24 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      print('Попытка входа: ${_loginController.text}');
-
       final result = await _apiService.login(
         _loginController.text.trim(),
         _passwordController.text.trim(),
+        remember: _rememberMe,
       );
 
-      print('Результат авторизации: $result');
-
       if (result['success'] == true && mounted) {
-        // Успешная авторизация
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => MainMenuScreen()),
         );
       } else {
-        // Ошибка авторизации
         setState(() {
           _errorMessage = result['error'] ?? 'Неверный логин или пароль';
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Ошибка при авторизации: $e');
       setState(() {
         _errorMessage = 'Ошибка подключения к серверу';
         _isLoading = false;
@@ -90,18 +80,12 @@ class _LoginScreenState extends State<LoginScreen> {
     if (value == null || value.isEmpty) {
       return 'Введите логин';
     }
-    if (value.length < 3) {
-      return 'Логин должен быть не менее 3 символов';
-    }
     return null;
   }
 
   String? _validatePassword(String? value) {
     if (value == null || value.isEmpty) {
       return 'Введите пароль';
-    }
-    if (value.length < 4) {
-      return 'Пароль должен быть не менее 4 символов';
     }
     return null;
   }
@@ -126,28 +110,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Логотип Адели вместо иконки
+                    // Логотип
                     Container(
-                      width: 250,
-                      height: 150,
-
-                      child: ClipOval(
-                        child: Image.asset(
+                      width: 350,
+                      height: 250,
+                      child: Image.asset(
                           'assets/images/Adeli-logo101.png',
-                          fit: BoxFit.contain,
+                          fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
-                            print('❌ Ошибка загрузки логотипа: $error');
-                            // Если изображение не загрузилось, показываем иконку
                             return Container(
                               color: Colors.blue,
                               child: Icon(
-                                Icons.diversity_3,
+                                Icons.family_restroom_outlined,
                                 size: 60,
                                 color: Colors.white,
                               ),
                             );
                           },
-                        ),
                       ),
                     ),
                     SizedBox(height: 40),
@@ -173,7 +152,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       controller: _loginController,
                       validator: _validateLogin,
                       textInputAction: TextInputAction.next,
-                      keyboardType: TextInputType.text,
                       decoration: InputDecoration(
                         labelText: 'Логин',
                         prefixIcon: Icon(Icons.person_outline),
@@ -182,7 +160,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         filled: true,
                         fillColor: Colors.white,
-                        errorStyle: TextStyle(color: Colors.red.shade700),
                       ),
                       enabled: !_isLoading,
                     ),
@@ -213,16 +190,38 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         filled: true,
                         fillColor: Colors.white,
-                        errorStyle: TextStyle(color: Colors.red.shade700),
                       ),
                       enabled: !_isLoading,
+                    ),
+
+                    // Чекбокс "Запомнить меня"
+                    Row(
+                      children: [
+                        Checkbox(
+                          value: _rememberMe,
+                          onChanged: _isLoading
+                              ? null
+                              : (value) {
+                            setState(() {
+                              _rememberMe = value ?? false;
+                            });
+                          },
+                          activeColor: Colors.blue,
+                        ),
+                        Text(
+                          'Запомнить меня',
+                          style: TextStyle(
+                            color: _isLoading ? Colors.grey : Colors.black87,
+                          ),
+                        ),
+                      ],
                     ),
 
                     // Сообщение об ошибке
                     if (_errorMessage != null)
                       Container(
                         width: double.infinity,
-                        margin: EdgeInsets.only(top: 16),
+                        margin: EdgeInsets.only(top: 8, bottom: 16),
                         padding: EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: Colors.red.shade50,
@@ -243,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
 
-                    SizedBox(height: 24),
+                    SizedBox(height: 16),
 
                     // Кнопка входа
                     SizedBox(
@@ -282,6 +281,23 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+                      ),
+                    ),
+
+                    SizedBox(height: 20),
+
+                    // ССЫЛКА НА РУКОВОДСТВО (исправлено)
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => HelpScreen()),
+                        );
+                      },
+                      icon: Icon(Icons.help_outline, color: Colors.blue),
+                      label: Text(
+                        'Руководство пользователя',
+                        style: TextStyle(color: Colors.blue),
                       ),
                     ),
                   ],
