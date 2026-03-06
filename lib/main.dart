@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show rootBundle;
 import 'screens/login_screen.dart';
 import 'screens/main_menu_screen.dart';
 import 'services/api_service.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'services/update_service.dart';
+import 'widgets/update_dialog.dart';
 
-void checkAsset() async {
-  try {
-    await rootBundle.load('assets/images/Adeli-logo101.png');
-    print('✅ Логотип найден');
-  } catch (e) {
-    print('❌ Логотип не найден: $e');
-  }
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  // Инициализация сервиса обновлений
+  await UpdateService().init();
+
+  runApp(MyApp());
 }
-void main() => runApp(MyApp());
 
 class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Кабинет Адели',
+      title: 'Кабинет клиента Адели-Пенза',
       theme: ThemeData(
         primarySwatch: Colors.blue,
         visualDensity: VisualDensity.adaptivePlatformDensity,
@@ -35,11 +35,61 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen> {
   final ApiService _apiService = ApiService();
+  final UpdateService _updateService = UpdateService();
 
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    _initialize();
+  }
+
+  Future<void> _initialize() async {
+    // Небольшая задержка для показа сплэша
+    await Future.delayed(Duration(seconds: 1));
+    // Проверяем обновления
+    await _checkForUpdates();
+    // Проверяем авторизацию
+    await _checkAuth();
+  }
+
+  Future<void> _checkForUpdates() async {
+    final versionInfo = await _updateService.checkForUpdates();
+
+    if (versionInfo != null && mounted) {
+      // Проверяем, обязательное ли обновление
+      if (_updateService.isVersionDeprecated) {
+        _showUpdateDialog(versionInfo, isRequired: true);
+        return; // Не продолжаем, пока пользователь не обновится
+      }
+
+      // Если обновление доступно, показываем диалог
+      if (_updateService.isUpdateAvailable) {
+        _showUpdateDialog(versionInfo, isRequired: false);
+      }
+    }
+  }
+
+  void _showUpdateDialog(VersionInfo versionInfo, {required bool isRequired}) {
+    showDialog(
+      context: context,
+      barrierDismissible:
+          !isRequired, // Нельзя закрыть при обязательном обновлении
+      builder: (context) => UpdateDialog(
+        versionInfo: versionInfo,
+        isRequired: isRequired,
+      ),
+    ).then((shouldUpdate) {
+      if (shouldUpdate == true) {
+        // Пользователь нажал "Обновить" - диалог уже открыл ссылку
+        // Можно показать сообщение или просто продолжить
+      } else if (isRequired) {
+        // При обязательном обновлении пользователь не может отказаться
+        _showUpdateDialog(versionInfo, isRequired: true);
+      } else {
+        // Пользователь выбрал "Позже" - продолжаем загрузку приложения
+        _checkAuth();
+      }
+    });
   }
 
   Future<void> _checkAuth() async {
@@ -90,31 +140,35 @@ class _SplashScreenState extends State<SplashScreen> {
               Container(
                 width: 250,
                 height: 150,
-                  child: Image.asset(
-                    'assets/images/Adeli-logo101.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      print('❌ Ошибка загрузки логотипа: $error');
-                      // Если изображение не загрузилось, показываем иконку
-                      return Container(
-                        color: Colors.blue,
-                        child: Icon(
-                          Icons.diversity_3,
-                          size: 60,
-                          color: Colors.white,
-                        ),
-                      );
-                    },
-                  ),
+                child: Image.asset(
+                  'assets/images/Adeli-logo101.png',
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    // Если изображение не загрузилось, показываем иконку
+                    return Container(
+                      color: Colors.blue,
+                      child: Icon(
+                        Icons.diversity_3,
+                        size: 60,
+                        color: Colors.white,
+                      ),
+                    );
+                  },
+                ),
               ),
               SizedBox(height: 32),
               Text(
-                'Личный кабинет',
+                'Личный кабинет клиента',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                   color: Colors.blue.shade800,
                 ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Проверка обновлений...',
+                style: TextStyle(color: Colors.grey.shade600),
               ),
               SizedBox(height: 16),
               CircularProgressIndicator(color: Colors.blue),

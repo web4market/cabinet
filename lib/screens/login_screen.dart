@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'main_menu_screen.dart';
 import 'help_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
@@ -115,37 +116,32 @@ class _LoginScreenState extends State<LoginScreen> {
                       width: 250,
                       height: 150,
                       child: Image.asset(
-                          'assets/images/Adeli-logo101.png',
-                          fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.blue,
-                              child: Icon(
-                                Icons.family_restroom_outlined,
-                                size: 60,
-                                color: Colors.white,
-                              ),
-                            );
-                          },
+                        'assets/images/Adeli-logo101.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.blue,
+                            child: Icon(
+                              Icons.family_restroom_outlined,
+                              size: 60,
+                              color: Colors.white,
+                            ),
+                          );
+                        },
                       ),
                     ),
                     SizedBox(height: 40),
 
                     Text(
-                      'Личный кабинет',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                        color: Colors.blue.shade800,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      'Личный кабинет клиента \n ЛОЦ Адели-Пенза',
+                      textAlign: TextAlign.center,
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                color: Colors.blue.shade800,
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
-                    Text(
-                      'Адели Пенза',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    SizedBox(height: 40),
+                    SizedBox(height: 20),
 
                     // Поле логина
                     TextFormField(
@@ -177,7 +173,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         prefixIcon: Icon(Icons.lock_outline),
                         suffixIcon: IconButton(
                           icon: Icon(
-                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            _obscurePassword
+                                ? Icons.visibility_off
+                                : Icons.visibility,
                           ),
                           onPressed: () {
                             setState(() {
@@ -202,10 +200,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           onChanged: _isLoading
                               ? null
                               : (value) {
-                            setState(() {
-                              _rememberMe = value ?? false;
-                            });
-                          },
+                                  setState(() {
+                                    _rememberMe = value ?? false;
+                                  });
+                                },
                           activeColor: Colors.blue,
                         ),
                         Text(
@@ -230,7 +228,8 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: Row(
                           children: [
-                            Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                            Icon(Icons.error_outline,
+                                color: Colors.red.shade700, size: 20),
                             SizedBox(width: 8),
                             Expanded(
                               child: Text(
@@ -260,32 +259,45 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         child: _isLoading
                             ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            ),
-                            SizedBox(width: 12),
-                            Text('Вход...'),
-                          ],
-                        )
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  SizedBox(width: 12),
+                                  Text('Вход...'),
+                                ],
+                              )
                             : Text(
-                          'Войти',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
+                                'Войти',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                       ),
                     ),
-
+                    SizedBox(height: 16),
+                    // Ссылка на восстановление пароля
+                    TextButton(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => ForgotPasswordScreen()),
+                        );
+                      },
+                      child: Text(
+                        'Забыли пароль?',
+                        style: TextStyle(color: Colors.blue),
+                      ),
+                    ),
                     SizedBox(height: 20),
-
                     // ССЫЛКА НА РУКОВОДСТВО (исправлено)
                     TextButton.icon(
                       onPressed: () {

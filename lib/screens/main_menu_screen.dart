@@ -6,6 +6,8 @@ import 'profile_screen.dart';
 import 'schedule_screen.dart';
 import 'courses_screen.dart';
 import 'help_screen.dart';
+import '../services/update_service.dart';
+import '../widgets/update_dialog.dart';
 
 class MainMenuScreen extends StatelessWidget {
   void _logout(BuildContext context) async {
@@ -46,7 +48,7 @@ class MainMenuScreen extends StatelessWidget {
         Navigator.pushAndRemoveUntil(
           context,
           MaterialPageRoute(builder: (_) => LoginScreen()),
-              (route) => false,
+          (route) => false,
         );
       }
     }
@@ -176,23 +178,43 @@ class MainMenuScreen extends StatelessWidget {
                   );
                 },
               ),
-/*
+
               MenuCard(
-                icon: Icons.assignment,
-                title: 'Заполнить анкету',
-                description: 'Анкета пациента',
-                color: Colors.orange,
-                onTap: () {
-                  // TODO: Реализовать экран анкеты
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Раздел "Анкета" в разработке'),
-                      behavior: SnackBarBehavior.floating,
-                    ),
-                  );
+                icon: Icons.system_update,
+                title: 'Проверить обновления',
+                description: 'Поиск новой версии приложения',
+                color: Colors.purple,
+                onTap: () async {
+                  final updateService = UpdateService();
+                  final versionInfo = await updateService.checkForUpdates();
+
+                  if (versionInfo != null) {
+                    if (updateService.isUpdateAvailable) {
+                      showDialog(
+                        context: context,
+                        builder: (context) => UpdateDialog(
+                          versionInfo: versionInfo,
+                          isRequired: versionInfo.isRequired,
+                        ),
+                      );
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('У вас последняя версия приложения'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Не удалось проверить обновления'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                  }
                 },
               ),
-*/
             ],
           ),
         ),

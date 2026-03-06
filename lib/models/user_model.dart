@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 class UserModel {
   final int id;
   final String username;
@@ -19,6 +17,14 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     print('📦 UserModel.fromJson: $json');
+
+    // Проверяем структуру - данные могут быть в корне или в 'data'
+    Map<String, dynamic> data;
+    if (json.containsKey('data') && json['data'] is Map) {
+      data = json['data'];
+    } else {
+      data = json;
+    }
 
     // Безопасное преобразование id
     int userId = 0;
@@ -65,8 +71,16 @@ class ChildModel {
   });
 
   factory ChildModel.fromJson(Map<String, dynamic> json) {
+    var child_id = 0;
+    if (json['id'] != null) {
+      if (json['id'] is int) {
+        child_id = json['id'];
+      } else if (json['id'] is String) {
+        child_id = int.tryParse(json['id']) ?? 0;
+      }
+    }
     return ChildModel(
-      id: json['id'] ?? 0,
+      id: child_id ?? 0,
       name: json['name']?.toString() ?? '',
       birthDate: json['birth_date']?.toString(),
       relation: json['relation']?.toString(),

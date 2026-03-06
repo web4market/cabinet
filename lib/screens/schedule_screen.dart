@@ -1,4 +1,3 @@
-// lib/screens/schedule_screen.dart
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../models/schedule_model.dart';
@@ -84,10 +83,10 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
       body: _isLoading
           ? Center(child: CircularProgressIndicator())
           : _error != null
-          ? _buildErrorWidget()
-          : _schedule == null
-          ? _buildEmptyWidget()
-          : _buildScheduleWidget(),
+              ? _buildErrorWidget()
+              : _schedule == null
+                  ? _buildEmptyWidget()
+                  : _buildScheduleWidget(),
     );
   }
 
@@ -192,7 +191,8 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               // Кабинет
               Row(
                 children: [
-                  Icon(Icons.meeting_room, size: 16, color: Colors.grey.shade600),
+                  Icon(Icons.meeting_room,
+                      size: 16, color: Colors.grey.shade600),
                   SizedBox(width: 4),
                   Expanded(
                     child: Text(

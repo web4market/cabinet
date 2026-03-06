@@ -39,8 +39,8 @@ class ScheduleCard extends StatelessWidget {
                   color: isPast
                       ? Colors.grey.shade100
                       : isToday
-                      ? Colors.blue.shade50
-                      : Colors.grey.shade50,
+                          ? Colors.blue.shade50
+                          : Colors.grey.shade50,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -50,9 +50,7 @@ class ScheduleCard extends StatelessWidget {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: isPast
-                            ? Colors.grey
-                            : Colors.blue.shade700,
+                        color: isPast ? Colors.grey : Colors.blue.shade700,
                       ),
                     ),
                     if (schedule['duration'] != null)
@@ -92,7 +90,7 @@ class ScheduleCard extends StatelessWidget {
                         ),
                         SizedBox(width: 4),
                         Text(
-                          schedule['teacher'] ?? 'Преподаватель',
+                          schedule['teacher'] ?? 'Специалист',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey.shade600,
