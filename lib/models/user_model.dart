@@ -71,6 +71,7 @@ class ChildModel {
   });
 
   factory ChildModel.fromJson(Map<String, dynamic> json) {
+    // Безопасное преобразование id
     var child_id = 0;
     if (json['id'] != null) {
       if (json['id'] is int) {

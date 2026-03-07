@@ -86,34 +86,21 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 children: [
                   // Логотип
                   Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.blue.withOpacity(0.3),
-                          blurRadius: 20,
-                          offset: Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: ClipOval(
-                      child: Image.asset(
-                        'assets/images/Adeli-logo101.png',
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.blue,
-                            child: Icon(
-                              Icons.lock_reset,
-                              size: 50,
-                              color: Colors.white,
-                            ),
-                          );
-                        },
-                      ),
+                    width: 250,
+                    height: 150,
+                    child: Image.asset(
+                      'assets/images/Adeli-logo101.png',
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.blue,
+                          child: Icon(
+                            Icons.family_restroom_outlined,
+                            size: 60,
+                            color: Colors.white,
+                          ),
+                        );
+                      },
                     ),
                   ),
 

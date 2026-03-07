@@ -31,7 +31,7 @@ class _ProfileScreenState extends State<ProfileScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _loadProfile();
   }
 
@@ -570,91 +570,6 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  Widget _buildPasswordStrengthIndicator(String password) {
-    int strength = 0;
-    if (password.length >= 8) strength++;
-    if (password.contains(RegExp(r'[A-Z]'))) strength++;
-    if (password.contains(RegExp(r'[0-9]'))) strength++;
-    if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength++;
-
-    Color color;
-    String text;
-
-    switch (strength) {
-      case 0:
-      case 1:
-        color = Colors.red;
-        text = 'Слабый';
-        break;
-      case 2:
-        color = Colors.orange;
-        text = 'Средний';
-        break;
-      case 3:
-        color = Colors.green;
-        text = 'Хороший';
-        break;
-      case 4:
-        color = Colors.blue;
-        text = 'Отличный';
-        break;
-      default:
-        color = Colors.grey;
-        text = 'Не определен';
-    }
-
-    return Padding(
-      padding: EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          Expanded(
-            child: LinearProgressIndicator(
-              value: strength / 4,
-              backgroundColor: Colors.grey.shade300,
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-            ),
-          ),
-          SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(
-              color: color,
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorWidget() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.error_outline, size: 64, color: Colors.red),
-          SizedBox(height: 16),
-          Text(
-            'Ошибка загрузки',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          SizedBox(height: 8),
-          Text(
-            _error ?? 'Попробуйте позже',
-            style: TextStyle(color: Colors.grey),
-          ),
-          SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: _loadProfile,
-            icon: Icon(Icons.refresh),
-            label: Text('Повторить'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildChildrenTab() {
     if (_user == null) {
       return Center(child: CircularProgressIndicator());
@@ -759,6 +674,91 @@ class _ProfileScreenState extends State<ProfileScreen>
           ),
         );
       },
+    );
+  }
+
+  Widget _buildPasswordStrengthIndicator(String password) {
+    int strength = 0;
+    if (password.length >= 8) strength++;
+    if (password.contains(RegExp(r'[A-Z]'))) strength++;
+    if (password.contains(RegExp(r'[0-9]'))) strength++;
+    if (password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'))) strength++;
+
+    Color color;
+    String text;
+
+    switch (strength) {
+      case 0:
+      case 1:
+        color = Colors.red;
+        text = 'Слабый';
+        break;
+      case 2:
+        color = Colors.orange;
+        text = 'Средний';
+        break;
+      case 3:
+        color = Colors.green;
+        text = 'Хороший';
+        break;
+      case 4:
+        color = Colors.blue;
+        text = 'Отличный';
+        break;
+      default:
+        color = Colors.grey;
+        text = 'Не определен';
+    }
+
+    return Padding(
+      padding: EdgeInsets.only(top: 8),
+      child: Row(
+        children: [
+          Expanded(
+            child: LinearProgressIndicator(
+              value: strength / 4,
+              backgroundColor: Colors.grey.shade300,
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+          SizedBox(width: 8),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red),
+          SizedBox(height: 16),
+          Text(
+            'Ошибка загрузки',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            _error ?? 'Попробуйте позже',
+            style: TextStyle(color: Colors.grey),
+          ),
+          SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadProfile,
+            icon: Icon(Icons.refresh),
+            label: Text('Повторить'),
+          ),
+        ],
+      ),
     );
   }
 

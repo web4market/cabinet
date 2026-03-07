@@ -273,7 +273,7 @@ class ApiService {
     required String newPassword,
   }) async {
     try {
-      print('ߔРchangePassword START');
+      print('changePassword START');
 
       final token = await getToken();
       if (token == null) {
@@ -284,8 +284,8 @@ class ApiService {
         };
       }
 
-      print('ߓĠОтправка запроса на /profile/change-password');
-      print('ߓĠТокен: ${token.substring(0, 20)}...');
+      print('Отправка запроса на /profile/change-password');
+      print('Токен: ${token.substring(0, 20)}...');
 
       final response = await _dio.post(
         '/profile/change-password',
@@ -301,8 +301,8 @@ class ApiService {
         ),
       );
 
-      print('ߓŠСтатус ответа: ${response.statusCode}');
-      print('ߓŠДанные ответа: ${response.data}');
+      print('Статус ответа: ${response.statusCode}');
+      print('Данные ответа: ${response.data}');
 
       if (response.statusCode == 200) {
         if (response.data == null) {
@@ -581,14 +581,14 @@ class ApiService {
 
   Future<Map<String, dynamic>> forgotPassword(String email) async {
     try {
-      print('ߓǠЗапрос на сброс пароля для email: $email');
+      print('Запрос на сброс пароля для email: $email');
 
       final response = await _dio.post(
         '/forgot-password',
         data: {'email': email},
       );
 
-      print('ߓŠОтвет: ${response.data}');
+      print('Ответ: ${response.data}');
       return response.data;
     } on DioException catch (e) {
       print('❌ Ошибка: $e');
