@@ -1,5 +1,3 @@
-// lib/models/daily_schedule_model.dart - исправленная версия
-
 class DailySchedule {
   final int id;
   final String title;
@@ -16,74 +14,133 @@ class DailySchedule {
   });
 
   factory DailySchedule.fromJson(Map<String, dynamic> json) {
-    print('📦 DailySchedule.fromJson: $json');
+    print('📦 DailySchedule.fromJson START');
+    print('   json keys: ${json.keys}');
 
-    var activitiesList = <Activity>[];
-    if (json['activities'] != null && json['activities'] is List) {
-      activitiesList = (json['activities'] as List)
-          .map((item) => Activity.fromJson(item))
-          .toList();
+    try {
+      // БЕЗОПАСНОЕ ПРЕОБРАЗОВАНИЕ id
+      int scheduleId;
+      if (json['id'] is int) {
+        scheduleId = json['id'];
+      } else if (json['id'] is String) {
+        scheduleId = int.tryParse(json['id']) ?? 0;
+      } else {
+        scheduleId = 0;
+      }
 
-      print('📦 Загружено ${activitiesList.length} активностей');
+      // БЕЗОПАСНОЕ ПРЕОБРАЗОВАНИЕ frontuser
+      int userId;
+      if (json['frontuser'] is int) {
+        userId = json['frontuser'];
+      } else if (json['frontuser'] is String) {
+        userId = int.tryParse(json['frontuser']) ?? 0;
+      } else {
+        userId = 0;
+      }
+
+      var activitiesList = <Activity>[];
+      if (json['activities'] != null && json['activities'] is List) {
+        activitiesList = (json['activities'] as List)
+            .map((item) => Activity.fromJson(item))
+            .toList();
+      }
+
+      return DailySchedule(
+        id: scheduleId,
+        title: json['p_name']?.toString() ?? 'Расписание',
+        startTime: json['start_h']?.toString() ?? '08:00',
+        userId: userId,
+        activities: activitiesList,
+      );
+    } catch (e, stackTrace) {
+      print('❌ ОШИБКА В DailySchedule.fromJson: $e');
+      print('📚 Stack trace: $stackTrace');
+      print('📦 Входные данные: $json');
+      rethrow;
     }
-
-    return DailySchedule(
-      id: json['id'] ?? 0,
-      title: json['p_name'] ?? 'Расписание',
-      startTime: json['start_h'] ?? '08:00',
-      userId: json['frontuser'] ?? 0,
-      activities: activitiesList,
-    );
   }
 
   // Получаем даты из заголовка расписания
-  List<String> get dates {
+  String get scheduleDate {
     // Пример: "Расписание 18.02.2026 - 20.02.2026 для пациента: ..."
     final regex = RegExp(r'(\d{2}\.\d{2}\.\d{4})');
-    final matches = regex.allMatches(title).toList();
-    return matches.map((m) => m.group(1) ?? '').where((d) => d.isNotEmpty).toList();
+    final match = regex.firstMatch(title);
+    return match?.group(1) ?? 'Неизвестно';
   }
 
-  // Получаем имя пациента из заголовка
+  // Получаем список всех дат из заголовка
+  List<String> get allDates {
+    final regex = RegExp(r'(\d{2}\.\d{2}\.\d{4})');
+    final matches = regex.allMatches(title).toList();
+    return matches
+        .map((m) => m.group(1) ?? '')
+        .where((d) => d.isNotEmpty)
+        .toList();
+  }
+
+  // Получаем имя пациента
   String get patientName {
     final parts = title.split('для пациента: ');
-    if (parts.length > 1) {
-      return parts[1].trim();
-    }
-    return 'Пациент';
+    return parts.length > 1 ? parts[1].trim() : 'Пациент';
   }
 
-  // Группируем активности по дням
+  // Группируем активности по дням на основе id_cell
   Map<String, List<Activity>> get activitiesByDay {
-    final grouped = <String, List<Activity>>{};
+    print('📅 НАЧАЛО ГРУППИРОВКИ. Всего активностей: ${activities.length}');
 
-    // В данных нет явного разделения по дням, используем id_cell для определения дня
-    // id_cell: 1001-1999 - день 1, 2001-2999 - день 2, 3001-3999 - день 3
-    for (var activity in activities) {
-      String day;
-      if (activity.cellId >= 1001 && activity.cellId <= 1999) {
-        day = 'День 1';
-      } else if (activity.cellId >= 2001 && activity.cellId <= 2999) {
-        day = 'День 2';
-      } else if (activity.cellId >= 3001 && activity.cellId <= 3999) {
-        day = 'День 3';
-      } else {
-        day = 'День ${activity.cellId ~/ 1000}';
+    final Map<String, List<Activity>> grouped = {};
+    final dates = allDates;
+    print('   Даты из заголовка: $dates');
+
+    for (var i = 0; i < activities.length; i++) {
+      final activity = activities[i];
+
+      print('   --- Активность $i ---');
+      print(
+          '      cellId: ${activity.cellId} (${activity.cellId.runtimeType})');
+      print(
+          '      startTime: ${activity.startTime} (${activity.startTime.runtimeType})');
+      print(
+          '      duration: ${activity.duration} (${activity.duration.runtimeType})');
+      print('      name: ${activity.name} (${activity.name.runtimeType})');
+
+      // Проверяем тип cellId
+      if (activity.cellId is! int) {
+        print(
+            '❌ ОШИБКА: cellId не int! Фактический тип: ${activity.cellId.runtimeType}');
+        print('   Значение: ${activity.cellId}');
       }
 
-      if (!grouped.containsKey(day)) {
-        grouped[day] = [];
+      try {
+        int dayIndex = (activity.cellId ~/ 1000) - 1;
+        if (dayIndex < 0) dayIndex = 0;
+
+        String dayKey =
+            dayIndex < dates.length ? dates[dayIndex] : 'День ${dayIndex + 1}';
+        print('      dayIndex: $dayIndex, dayKey: $dayKey');
+
+        if (!grouped.containsKey(dayKey)) {
+          grouped[dayKey] = [];
+        }
+        grouped[dayKey]!.add(activity);
+      } catch (e, stack) {
+        print('❌ ОШИБКА ПРИ ГРУППИРОВКЕ АКТИВНОСТИ $i');
+        print('   cellId: ${activity.cellId} (${activity.cellId.runtimeType})');
+        print('   Ошибка: $e');
+        print('   Стек: $stack');
       }
-      grouped[day]!.add(activity);
     }
 
-    // Сортируем активности в каждом дне по времени
+    print('📊 РЕЗУЛЬТАТ ГРУППИРОВКИ: ${grouped.length} дней');
     grouped.forEach((key, list) {
-      list.sort((a, b) => a.startTime.compareTo(b.startTime));
+      print('   $key: ${list.length} активностей');
     });
 
     return grouped;
   }
+
+  // Получаем количество дней
+  int get daysCount => activitiesByDay.length;
 }
 
 class Activity {
@@ -112,18 +169,123 @@ class Activity {
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) {
-    return Activity(
-      id: json['id'] ?? 0,
-      activityId: json['id_activity'],
-      cellId: json['id_cell'] ?? 0,
-      merge: json['merge'] ?? 0,
-      startTime: json['start_t'] ?? '--:--',
-      endTime: json['end_t'] ?? '--:--',
-      textInCell: json['textincell']?.toString().trim() ?? '',
-      duration: json['duration'] ?? 0,
-      name: json['act_name'] ?? 'Занятие',
-      description: json['description']?.toString().trim() ?? '',
-    );
+    print('📦 Activity.fromJson START');
+    print('   Все ключи: ${json.keys}');
+
+    // Детально проверяем каждое поле
+    print('   id: ${json['id']} (${json['id'].runtimeType})');
+    print(
+        '   id_activity: ${json['id_activity']} (${json['id_activity'].runtimeType})');
+    print('   id_cell: ${json['id_cell']} (${json['id_cell'].runtimeType})');
+    print('   merge: ${json['merge']} (${json['merge'].runtimeType})');
+    print('   duration: ${json['duration']} (${json['duration'].runtimeType})');
+    print('   start_t: ${json['start_t']} (${json['start_t'].runtimeType})');
+    print('   end_t: ${json['end_t']} (${json['end_t'].runtimeType})');
+    print('   act_name: ${json['act_name']} (${json['act_name'].runtimeType})');
+
+    try {
+      // БЕЗОПАСНОЕ ПРЕОБРАЗОВАНИЕ ТИПОВ
+      int id = _parseInt(json['id'], 'id');
+      int? activityId = json['id_activity'] != null
+          ? _parseInt(json['id_activity'], 'id_activity')
+          : null;
+      int cellId = _parseInt(json['id_cell'], 'id_cell');
+      int merge = _parseInt(json['merge'], 'merge');
+      int duration = _parseInt(json['duration'], 'duration');
+
+      print('✅ После преобразования:');
+      print('   id -> $id (${id.runtimeType})');
+      print('   activityId -> $activityId (${activityId.runtimeType})');
+      print('   cellId -> $cellId (${cellId.runtimeType})');
+      print('   merge -> $merge (${merge.runtimeType})');
+      print('   duration -> $duration (${duration.runtimeType})');
+
+      return Activity(
+        id: id,
+        activityId: activityId,
+        cellId: cellId,
+        merge: merge,
+        startTime: json['start_t']?.toString() ?? '--:--',
+        endTime: json['end_t']?.toString() ?? '--:--',
+        textInCell: _cleanHtmlText(json['textincell']?.toString() ?? ''),
+        duration: duration,
+        name: json['act_name']?.toString() ?? 'Занятие',
+        description: _cleanHtmlText(json['description']?.toString() ?? ''),
+      );
+    } catch (e, stackTrace) {
+      print('❌ ОШИБКА В Activity.fromJson: $e');
+      print('📚 Stack trace: $stackTrace');
+      print('📦 Проблемный JSON: $json');
+      rethrow;
+    }
+  }
+
+// УЛУЧШЕННЫЙ МЕТОД ПРЕОБРАЗОВАНИЯ С ОТЛАДКОЙ
+  static int _parseInt(dynamic value, String fieldName) {
+    print('   🔍 Парсинг $fieldName: "$value" (${value.runtimeType})');
+
+    if (value == null) {
+      print('   ⚠️ $fieldName = null -> возвращаем 0');
+      return 0;
+    }
+
+    if (value is int) {
+      print('   ✅ $fieldName уже int: $value');
+      return value;
+    }
+
+    if (value is double) {
+      int result = value.toInt();
+      print('   ✅ $fieldName был double, стал int: $result');
+      return result;
+    }
+
+    if (value is String) {
+      String trimmed = value.trim();
+      if (trimmed.isEmpty) {
+        print('   ⚠️ $fieldName пустая строка -> 0');
+        return 0;
+      }
+
+      try {
+        int result = int.parse(trimmed);
+        print('   ✅ $fieldName строка -> int: $result');
+        return result;
+      } catch (e) {
+        try {
+          double result = double.parse(trimmed);
+          int intResult = result.toInt();
+          print('   ⚠️ $fieldName строка -> double -> int: $intResult');
+          return intResult;
+        } catch (e) {
+          print('   ❌ НЕ УДАЛОСЬ преобразовать $fieldName "$value" в число');
+          return 0;
+        }
+      }
+    }
+
+    print('   ❌ Неизвестный тип для $fieldName: ${value.runtimeType}');
+    return 0;
+  }
+
+  // Очистка HTML тегов из текста
+  static String _cleanHtmlText(String html) {
+    if (html.isEmpty) return '';
+
+    // Удаляем HTML теги
+    String text = html.replaceAll(RegExp(r'<[^>]*>'), ' ');
+    // Заменяем множественные пробелы на один
+    text = text.replaceAll(RegExp(r'\s+'), ' ');
+    // Декодируем HTML сущности
+    text = text
+        .replaceAll('&nbsp;', ' ')
+        .replaceAll('&amp;', '&')
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'");
+
+    return text.trim();
   }
 
   String get timeRange => '$startTime - $endTime';
@@ -131,14 +293,16 @@ class Activity {
 
   String get room {
     final text = textInCell.isNotEmpty ? textInCell : description;
-    final lines = text.split('\n').where((line) => line.trim().isNotEmpty).toList();
+    final lines =
+        text.split('\n').where((line) => line.trim().isNotEmpty).toList();
     if (lines.isNotEmpty) return lines[0].trim();
     return 'Кабинет не указан';
   }
 
   String get specialist {
     final text = textInCell.isNotEmpty ? textInCell : description;
-    final lines = text.split('\n').where((line) => line.trim().isNotEmpty).toList();
+    final lines =
+        text.split('\n').where((line) => line.trim().isNotEmpty).toList();
     if (lines.length > 1) return lines[1].trim();
     return 'Специалист не указан';
   }

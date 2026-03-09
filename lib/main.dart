@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'screens/login_screen.dart';
 import 'screens/main_menu_screen.dart';
 import 'services/api_service.dart';
