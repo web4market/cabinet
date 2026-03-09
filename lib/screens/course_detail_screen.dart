@@ -99,9 +99,9 @@ class CourseDetailScreen extends StatelessWidget {
             if (data.contacts.isNotEmpty) ...[
               _buildSection(
                 'Контакты',
-                data.contacts.map((contact) =>
-                    _buildContactRow(context, contact)
-                ).toList(),
+                data.contacts
+                    .map((contact) => _buildContactRow(context, contact))
+                    .toList(),
               ),
             ],
 
@@ -124,15 +124,15 @@ class CourseDetailScreen extends StatelessWidget {
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: course.content.map((line) =>
-                      Padding(
-                        padding: EdgeInsets.only(bottom: 4),
-                        child: Text(
-                          '• $line',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      )
-                  ).toList(),
+                  children: course.content
+                      .map((line) => Padding(
+                            padding: EdgeInsets.only(bottom: 4),
+                            child: Text(
+                              '$line',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ))
+                      .toList(),
                 ),
               ),
             ],
@@ -201,12 +201,8 @@ class CourseDetailScreen extends StatelessWidget {
   }
 
   Widget _buildContactRow(BuildContext context, Contact contact) {
-    IconData icon = contact.type == 'phone'
-        ? Icons.phone
-        : Icons.email;
-    Color color = contact.type == 'phone'
-        ? Colors.green
-        : Colors.blue;
+    IconData icon = contact.type == 'phone' ? Icons.phone : Icons.email;
+    Color color = contact.type == 'phone' ? Colors.green : Colors.blue;
 
     return Padding(
       padding: EdgeInsets.symmetric(vertical: 4),

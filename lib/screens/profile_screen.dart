@@ -23,6 +23,11 @@ class _ProfileScreenState extends State<ProfileScreen>
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Состояние видимости паролей
+  bool _showCurrentPassword = false;
+  bool _showNewPassword = false;
+  bool _showConfirmPassword = false;
+
   // Состояние редактирования
   bool _isEditing = false;
   bool _isSaving = false;
@@ -129,7 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         currentPassword: _currentPasswordController.text,
         newPassword: _newPasswordController.text,
       );
-
+      print('📥 Ответ от API: $response');
       if (response['success'] == true) {
         _showMessage('Пароль успешно изменен');
         _currentPasswordController.clear();
@@ -467,39 +472,86 @@ class _ProfileScreenState extends State<ProfileScreen>
                   SizedBox(height: 16),
                   TextFormField(
                     controller: _currentPasswordController,
-                    obscureText: true,
+                    obscureText: !_showCurrentPassword,
                     decoration: InputDecoration(
                       labelText: 'Текущий пароль',
                       prefixIcon: Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showCurrentPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.grey.shade600,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showCurrentPassword = !_showCurrentPassword;
+                          });
+                        },
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
                   SizedBox(height: 16),
                   TextFormField(
                     controller: _newPasswordController,
-                    obscureText: true,
+                    obscureText: !_showNewPassword,
                     decoration: InputDecoration(
                       labelText: 'Новый пароль',
                       prefixIcon: Icon(Icons.lock_open),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showNewPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showNewPassword = !_showNewPassword;
+                          });
+                        },
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
                   SizedBox(height: 16),
                   TextFormField(
                     controller: _confirmPasswordController,
-                    obscureText: true,
+                    obscureText: !_showConfirmPassword,
                     decoration: InputDecoration(
                       labelText: 'Подтверждение пароля',
                       prefixIcon: Icon(Icons.lock_outline),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showConfirmPassword = !_showConfirmPassword;
+                          });
+                        },
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
+                      filled: true,
+                      fillColor: Colors.white,
                     ),
                   ),
+                  // Индикатор сложности пароля
+                  if (_newPasswordController.text.isNotEmpty)
+                    _buildPasswordStrengthIndicator(
+                        _newPasswordController.text),
                   SizedBox(height: 20),
                   SizedBox(
                     width: double.infinity,

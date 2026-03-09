@@ -163,7 +163,25 @@ class ActivityModel {
   // Очистка HTML тегов из текста
   static String _cleanHtmlText(String html) {
     // Удаляем HTML теги
-    String text = html.replaceAll(RegExp(r'<[^>]*>'), ' ');
+    // 1. Заменяем <br>, <br/>, <br /> на \n
+    String text =
+        html.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
+
+    // 2. Заменяем <p> на \n\n (двойной перенос для абзацев)
+    text = text.replaceAll(RegExp(r'<p>', caseSensitive: false), '\n\n');
+
+    // 3. Заменяем </p> на \n (иногда нужен только перенос)
+    text = text.replaceAll(RegExp(r'</p>', caseSensitive: false), '\n');
+
+    // 4. Заменяем <div> на \n
+    text = text.replaceAll(RegExp(r'<div>', caseSensitive: false), '\n');
+    text = text.replaceAll(RegExp(r'</div>', caseSensitive: false), '');
+
+    // 5. Заменяем <li> на • (маркер списка)
+    text = text.replaceAll(RegExp(r'<li>', caseSensitive: false), '\n• ');
+    text = text.replaceAll(RegExp(r'</li>', caseSensitive: false), '');
+
+    text = text.replaceAll(RegExp(r'<[^>]*>'), ' ');
     // Заменяем множественные пробелы на один
     text = text.replaceAll(RegExp(r'\s+'), ' ');
     // Декодируем HTML сущности
@@ -185,19 +203,21 @@ class ActivityModel {
     final roomRegex = RegExp(r'Кабинет\s*(\d+)', caseSensitive: false);
     final match = roomRegex.firstMatch(textInCell);
     if (match != null) {
-      return 'Кабинет ${match.group(1)}';
+      return '${match.group(1)}';
     }
 
-    final lines = textInCell.split(' ').where((l) => l.trim().isNotEmpty).toList();
+    final lines =
+        textInCell.split(' ').where((l) => l.trim().isNotEmpty).toList();
     return lines.isNotEmpty ? lines[0].trim() : 'Кабинет не указан';
   }
 
   String get specialist {
     // Ищем специалиста (обычно после слова "Кабинет")
-    final lines = textInCell.split(' ').where((l) => l.trim().isNotEmpty).toList();
-    if (lines.length > 1) {
+    final lines =
+        textInCell.split(' ').where((l) => l.trim().isNotEmpty).toList();
+    if (lines.length > 2) {
       // Пропускаем первое слово (Кабинет ХХХ) и берем остальное
-      return lines.skip(1).join(' ').trim();
+      return lines.skip(2).join(' ').trim();
     }
     return 'Специалист не указан';
   }

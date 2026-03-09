@@ -39,9 +39,8 @@ class CourseModel {
     return CourseModel(
       id: courseId,
       userId: userId,
-      content: json['content'] != null
-          ? List<String>.from(json['content'])
-          : [],
+      content:
+          json['content'] != null ? List<String>.from(json['content']) : [],
       parsedData: ParsedCourseData.fromJson(json['parsed_data'] ?? {}),
     );
   }
@@ -87,9 +86,7 @@ class ParsedCourseData {
       clientName: json['client_name']?.toString(),
       status: json['status']?.toString(),
       contacts: json['contacts'] != null
-          ? (json['contacts'] as List)
-          .map((c) => Contact.fromJson(c))
-          .toList()
+          ? (json['contacts'] as List).map((c) => Contact.fromJson(c)).toList()
           : [],
     );
   }

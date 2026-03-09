@@ -27,11 +27,11 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
     });
 
     try {
-      print('🔄 Загрузка расписания...');
+//      print('🔄 Загрузка расписания...');
 
       final response = await _apiService.getSchedule();
 
-      print('📦 Ответ: $response');
+//      print('📦 Ответ: $response');
 
       if (response['success'] == true) {
         final data = response['data'];
@@ -43,13 +43,13 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
             _schedule = ScheduleModel.fromJson(scheduleData);
             _isLoading = false;
           });
-          print('✅ Загружено ${_schedule!.activities.length} занятий');
+//          print('✅ Загружено ${_schedule!.activities.length} занятий');
         } else {
           setState(() {
             _schedule = null;
             _isLoading = false;
           });
-          print('ℹ️ Нет данных расписания');
+//          print('ℹ️ Нет данных расписания');
         }
       } else {
         setState(() {
@@ -58,7 +58,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
         });
       }
     } catch (e) {
-      print('❌ Ошибка: $e');
+      //    print('❌ Ошибка: $e');
       setState(() {
         _error = 'Ошибка соединения';
         _isLoading = false;
@@ -196,7 +196,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
                   SizedBox(width: 4),
                   Expanded(
                     child: Text(
-                      activity.room,
+                      'Кабинет ${activity.room}',
                       style: TextStyle(color: Colors.grey.shade700),
                     ),
                   ),
@@ -249,15 +249,15 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
               _buildDetailRow('Длительность', activity.durationText),
               _buildDetailRow('Кабинет', activity.room),
               _buildDetailRow('Специалист', activity.specialist),
-              if (activity.textInCell.isNotEmpty) ...[
-                SizedBox(height: 12),
-                Text(
-                  'Описание:',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 4),
-                Text(activity.textInCell),
-              ],
+//              if (activity.textInCell.isNotEmpty) ...[
+//                SizedBox(height: 12),
+//                Text(
+//                 'Описание:',
+//                  style: TextStyle(fontWeight: FontWeight.bold),
+//                ),
+//                SizedBox(height: 4),
+//                Text(activity.textInCell),
+//              ],
             ],
           ),
         ),
@@ -273,12 +273,12 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
+      padding: EdgeInsets.symmetric(vertical: 2),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 80,
+            width: 120,
             child: Text(
               '$label:',
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -327,7 +327,7 @@ class _ScheduleScreenState extends State<ScheduleScreen> {
           Icon(Icons.event_busy, size: 80, color: Colors.grey.shade400),
           SizedBox(height: 16),
           Text(
-            'На сегодня занятий нет',
+            'На ближайшую дату занятий нет',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
