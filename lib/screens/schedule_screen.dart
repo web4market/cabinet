@@ -19,11 +19,10 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   final List<ScheduleMode> _modes = [
     ScheduleMode.today,
     ScheduleMode.tomorrow,
-    ScheduleMode.all,
+    ScheduleMode.all, // Возвращаем "Все дни"
   ];
 
   int _selectedModeIndex = 0;
-  List<String> _availableDates = [];
 
   @override
   void initState() {
@@ -46,56 +45,35 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     setState(() {
       _isLoading = true;
       _error = null;
-      _availableDates = [];
     });
 
     try {
       print('🔄 Загрузка расписания...');
 
-      String period = _modes[_selectedModeIndex].apiPeriod;
-      final response = await _apiService.getSchedule(period: period);
+      late final Map<String, dynamic> response;
+
+      switch (_modes[_selectedModeIndex]) {
+        case ScheduleMode.today:
+          response = await _apiService.getSchedule(period: 'today');
+          break;
+        case ScheduleMode.tomorrow:
+          response = await _apiService.getSchedule(period: 'tomorrow');
+          break;
+        case ScheduleMode.all:
+          response = await _apiService.getSchedule(period: 'all');
+          break;
+      }
 
       print('📦 Ответ: $response');
 
       if (response['success'] == true) {
         final schedule = PatientSchedule.fromJson(response);
-
-        // Для period=all нам нужно получить даты из верхнего уровня или из данных
-        List<String> dates = [];
-
-        if (period == 'all') {
-          // Для всех дней используем даты из данных (если есть)
-          // или показываем всё как один день
-          if (schedule.data.isNotEmpty) {
-            // Проверяем, есть ли даты в данных
-            bool hasDates = schedule.data.any((a) => a.date.isNotEmpty);
-            if (hasDates) {
-              dates = schedule.availableDates;
-            } else {
-              // Если нет дат, создаем одну виртуальную дату
-              dates = ['all'];
-            }
-          }
-        } else {
-          // Для today/tomorrow используем дату из верхнего уровня
-          if (schedule.date != null) {
-            dates = [schedule.date!];
-          }
-        }
-
         setState(() {
           _schedule = schedule;
-          _availableDates = dates;
           _isLoading = false;
         });
 
         print('✅ Загружено активностей: ${schedule.data.length}');
-        print('📅 Даты: $_availableDates');
-
-        if (schedule.data.isNotEmpty) {
-          final first = schedule.data.first;
-          print('   Пример: ${first.service} в ${first.time}');
-        }
       } else {
         setState(() {
           _error = response['message'] ?? 'Ошибка загрузки';
@@ -111,34 +89,6 @@ class _ScheduleScreenState extends State<ScheduleScreen>
     }
   }
 
-  List<Activity> _getActivitiesForCurrentMode() {
-    if (_schedule == null) return [];
-
-    switch (_modes[_selectedModeIndex]) {
-      case ScheduleMode.today:
-        final today = DateTime.now().toIso8601String().split('T').first;
-        if (_schedule!.date == today) {
-          return _schedule!.data;
-        }
-        // Если нет точной даты, показываем все (для теста)
-        return _schedule!.data;
-
-      case ScheduleMode.tomorrow:
-        final tomorrow = DateTime.now()
-            .add(Duration(days: 1))
-            .toIso8601String()
-            .split('T')
-            .first;
-        if (_schedule!.date == tomorrow) {
-          return _schedule!.data;
-        }
-        return [];
-
-      case ScheduleMode.all:
-        return _schedule!.data;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -149,14 +99,11 @@ class _ScheduleScreenState extends State<ScheduleScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: _modes.map((mode) => Tab(text: mode.title)).toList(),
-          labelStyle: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-          unselectedLabelStyle: TextStyle(fontSize: 14),
         ),
         actions: [
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: _loadSchedule,
-            tooltip: 'Обновить',
           ),
         ],
       ),
@@ -171,32 +118,156 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 
   Widget _buildScheduleWidget() {
-    final activities = _getActivitiesForCurrentMode();
+    if (_schedule == null) return _buildEmptyWidget();
 
-    if (activities.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.event_busy, size: 64, color: Colors.grey.shade400),
-            SizedBox(height: 16),
-            Text(
-              'Нет занятий ${_modes[_selectedModeIndex].title.toLowerCase()}',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      );
+    // Для today и tomorrow используем старый формат (плоский список)
+    if (_selectedModeIndex < 2) {
+      if (_schedule!.flatActivities.isEmpty) {
+        return _buildEmptyWidget();
+      }
+      return _buildTodayTomorrowWidget();
+    }
+    // Для all используем новый формат (сгруппированный)
+    else {
+      return _buildAllDaysWidget();
+    }
+  }
+
+  /// Для сегодня и завтра - полная информация
+  Widget _buildTodayTomorrowWidget() {
+    // Группируем активности по пациентам
+    final Map<String, List<Activity>> byPatient = {};
+    for (var activity in _schedule!.data) {
+      if (!byPatient.containsKey(activity.patientGuid)) {
+        byPatient[activity.patientGuid] = [];
+      }
+      byPatient[activity.patientGuid]!.add(activity);
     }
 
-    // Группируем по пациентам
-    final byPatient = activities.groupByPatient();
+    // Сортируем активности для каждого пациента
+    byPatient.forEach((key, list) {
+      list.sort((a, b) => a.sortTime.compareTo(b.sortTime));
+    });
 
     return ListView(
       padding: EdgeInsets.all(12),
       children: byPatient.entries
           .map((entry) => _buildPatientCard(entry.key, entry.value))
           .toList(),
+    );
+  }
+
+  /// Для всех дней - упрощенное отображение (только дата, время и название)
+  Widget _buildAllDaysWidget() {
+    if (_schedule == null || !_schedule!.isGroupedByDay) {
+      print('⚠️ Нет данных для отображения всех дней');
+      return _buildEmptyWidget();
+    }
+
+    final days = _schedule!.days;
+    print('📊 Дней для отображения: ${days.length}');
+
+    if (days.isEmpty) {
+      return _buildEmptyWidget();
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(12),
+      itemCount: days.length,
+      itemBuilder: (context, index) {
+        final day = days[index];
+        final activities = day.simpleActivities;
+
+        return Card(
+          margin: EdgeInsets.only(bottom: 16),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Заголовок с датой
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
+                  ),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.calendar_today,
+                        size: 16, color: Colors.blue.shade700),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        day.formattedDate,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade800,
+                        ),
+                      ),
+                    ),
+                    Text(
+                      day.dayOfWeek,
+                      style: TextStyle(
+                        color: Colors.blue.shade600,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Список процедур (только время и название)
+              ...activities
+                  .map(
+                    (activity) => Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 60,
+                            child: Text(
+                              activity.time,
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue.shade700,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              activity.service,
+                              style: TextStyle(fontSize: 15),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  )
+                  .toList(),
+
+              if (activities.isEmpty)
+                Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Center(
+                    child: Text(
+                      'Нет процедур в этот день',
+                      style: TextStyle(color: Colors.grey.shade500),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 
@@ -355,16 +426,15 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                     SizedBox(height: 2),
                     Row(
                       children: [
-                        Icon(Icons.people,
-                            size: 12, color: Colors.grey.shade500),
+                        Icon(Icons.person_outline,
+                            size: 14, color: Colors.grey.shade500),
                         SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            'ассистент: ${activity.employees.additional!.name}',
+                            activity.employees.additional!.name,
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                              fontStyle: FontStyle.italic,
+                              fontSize: 13,
+                              color: Colors.grey.shade700,
                             ),
                           ),
                         ),
@@ -408,105 +478,58 @@ class _ScheduleScreenState extends State<ScheduleScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => DraggableScrollableSheet(
-        initialChildSize: 0.7,
-        minChildSize: 0.5,
-        maxChildSize: 0.9,
-        expand: false,
-        builder: (context, scrollController) {
-          return Container(
-            padding: EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Center(
-                  child: Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                SizedBox(height: 20),
-
-                // Заголовок
-                Row(
-                  children: [
-                    CircleAvatar(
-                      backgroundColor: Colors.blue.shade100,
-                      child: Text(
-                        activity.initials,
-                        style: TextStyle(
-                          color: Colors.blue.shade800,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            activity.childName,
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Text(
-                            activity.relation,
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-
-                SizedBox(height: 20),
-
-                // Детали
-                _buildDetailRow('Услуга', activity.service),
-                _buildDetailRow('Время', activity.timeRange),
-                _buildDetailRow('Длительность', activity.durationText),
-                _buildDetailRow('Специалист', activity.employees.main.name),
-                if (activity.hasAdditionalEmployee)
-                  _buildDetailRow(
-                      'Ассистент', activity.employees.additional!.name),
-                _buildDetailRow('Кабинет', 'Каб. ${activity.cabinet}'),
-
-                SizedBox(height: 20),
-                Center(
-                  child: ElevatedButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: Text('Закрыть'),
-                    style: ElevatedButton.styleFrom(
-                      minimumSize: Size(double.infinity, 45),
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
-          );
-        },
+            SizedBox(height: 20),
+            Text(
+              activity.service,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 16),
+            _buildDetailRow('Пациент', activity.childName),
+            _buildDetailRow('Время', activity.timeRange),
+            _buildDetailRow('Длительность', activity.durationText),
+            _buildDetailRow('Специалист', activity.employees.main.name),
+            if (activity.hasAdditionalEmployee)
+              _buildDetailRow('Ассистент', activity.employees.additional!.name),
+            _buildDetailRow('Кабинет', 'Каб. ${activity.cabinet}'),
+            SizedBox(height: 20),
+            Center(
+              child: ElevatedButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Закрыть'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildDetailRow(String label, String value) {
     return Padding(
-      padding: EdgeInsets.symmetric(vertical: 6),
+      padding: EdgeInsets.symmetric(vertical: 4),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: 90,
+            width: 120,
             child: Text(
               '$label:',
               style: TextStyle(
@@ -516,42 +539,47 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             ),
           ),
           Expanded(
-            child: Text(
-              value,
-              style: TextStyle(fontSize: 15),
-            ),
+            child: Text(value),
           ),
         ],
       ),
     );
   }
 
+  String _formatDate(String date) {
+    if (date == 'Без даты') return date;
+    try {
+      final parts = date.split('-');
+      if (parts.length == 3) {
+        return '${parts[2]}.${parts[1]}.${parts[0]}';
+      }
+    } catch (e) {}
+    return date;
+  }
+
   Widget _buildErrorWidget() {
     return Center(
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.error_outline, size: 64, color: Colors.red),
-            SizedBox(height: 16),
-            Text(
-              'Ошибка загрузки',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 8),
-            Text(
-              _error ?? 'Попробуйте позже',
-              style: TextStyle(color: Colors.grey),
-            ),
-            SizedBox(height: 24),
-            ElevatedButton.icon(
-              onPressed: _loadSchedule,
-              icon: Icon(Icons.refresh),
-              label: Text('Повторить'),
-            ),
-          ],
-        ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.error_outline, size: 64, color: Colors.red),
+          SizedBox(height: 16),
+          Text(
+            'Ошибка загрузки',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(height: 8),
+          Text(
+            _error ?? 'Попробуйте позже',
+            style: TextStyle(color: Colors.grey),
+          ),
+          SizedBox(height: 24),
+          ElevatedButton.icon(
+            onPressed: _loadSchedule,
+            icon: Icon(Icons.refresh),
+            label: Text('Повторить'),
+          ),
+        ],
       ),
     );
   }
@@ -590,7 +618,6 @@ class _ScheduleScreenState extends State<ScheduleScreen>
   }
 }
 
-/// Режимы отображения расписания
 enum ScheduleMode {
   today,
   tomorrow,
@@ -604,17 +631,6 @@ enum ScheduleMode {
         return 'Завтра';
       case ScheduleMode.all:
         return 'Все дни';
-    }
-  }
-
-  String get apiPeriod {
-    switch (this) {
-      case ScheduleMode.today:
-        return 'today';
-      case ScheduleMode.tomorrow:
-        return 'tomorrow';
-      case ScheduleMode.all:
-        return 'all';
     }
   }
 }

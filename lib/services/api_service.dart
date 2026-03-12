@@ -374,10 +374,56 @@ class ApiService {
   // ========== РАСПИСАНИЕ (ОБНОВЛЕНО) ==========
 
   /// Получить расписание с возможностью фильтрации по периоду
-  Future<Map<String, dynamic>> getSchedule({String period = 'all'}) async {
+  Future<Map<String, dynamic>> getSchedule({
+    required String period,
+    String? date,
+  }) async {
     try {
       print('🔍 getSchedule() START');
-      print('📌 Период: $period');
+      print('📌 period: $period, date: $date');
+
+      final token = await getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'Не авторизован',
+          'needAuth': true
+        };
+      }
+
+      String url;
+      if (period == 'date' && date != null) {
+        url = '/schedule/date/$date';
+      } else {
+        url = '/schedule?period=$period';
+      }
+
+      print('📤 Запрос к $url');
+
+      final response = await _dio.get(
+        url,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Accept': 'application/json'
+          },
+        ),
+      );
+
+      print('📥 Статус ответа: ${response.statusCode}');
+
+      return response.data;
+    } on DioException catch (e) {
+      print('❌ Ошибка: ${e.message}');
+      return {'success': false, 'message': 'Ошибка загрузки расписания'};
+    }
+  }
+
+  /// Получить расписание на конкретную дату
+  Future<Map<String, dynamic>> getScheduleByDate(String date) async {
+    try {
+      print('🔍 getScheduleByDate() START');
+      print('📌 date: $date');
 
       final token = await getToken();
       if (token == null) {
@@ -389,11 +435,8 @@ class ApiService {
         };
       }
 
-      print('📤 Запрос к /api/schedule с period=$period');
-
       final response = await _dio.get(
-        '/schedule',
-        queryParameters: {'period': period},
+        '/schedule/date/$date',
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
@@ -404,19 +447,42 @@ class ApiService {
 
       print('📥 Статус ответа: ${response.statusCode}');
       print('📥 Тип данных: ${response.data.runtimeType}');
+      print('📥 Данные: $response.data');
 
-      return response.data;
-    } on DioException catch (e) {
-      print('❌ DIO Ошибка: ${e.message}');
-      if (e.response?.statusCode == 401) {
-        await deleteToken();
+      if (response.data == null) {
+        print('❌ API вернул null');
+        return {'success': false, 'message': 'Сервер вернул пустой ответ'};
+      }
+
+      if (response.data is! Map) {
+        print('❌ Неверный тип данных: ${response.data.runtimeType}');
         return {
           'success': false,
-          'message': 'Сессия истекла',
-          'needAuth': true
+          'message': 'Неверный формат ответа от сервера'
         };
       }
-      return {'success': false, 'message': 'Ошибка загрузки расписания'};
+
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      print('❌ DioException: ${e.message}');
+      print('❌ Статус: ${e.response?.statusCode}');
+      print('❌ Данные: ${e.response?.data}');
+
+      if (e.response?.statusCode == 404) {
+        return {
+          'success': true,
+          'data': [],
+          'message': 'Нет расписания на эту дату'
+        };
+      }
+
+      return {
+        'success': false,
+        'message': 'Ошибка загрузки расписания: ${e.message}'
+      };
+    } catch (e) {
+      print('❌ Неизвестная ошибка: $e');
+      return {'success': false, 'message': 'Неизвестная ошибка: $e'};
     }
   }
 

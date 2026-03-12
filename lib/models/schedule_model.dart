@@ -1,13 +1,16 @@
-// Модель расписания для пациента
+import 'package:flutter/material.dart';
+
+/// Модель расписания для пациента
 class PatientSchedule {
   final bool success;
-  final List<Activity> data;
+  final List<dynamic> data; // может быть List<Activity> или List<ScheduleDay>
   final int total;
   final int userId;
   final int timestamp;
-  final String? date; // для period=today
-  final String? formattedDate; // для period=today
-  final String? dayOfWeek; // для period=today
+  final int? totalDays;
+  final String? date;
+  final String? formattedDate;
+  final String? dayOfWeek;
 
   PatientSchedule({
     required this.success,
@@ -15,6 +18,7 @@ class PatientSchedule {
     required this.total,
     required this.userId,
     required this.timestamp,
+    this.totalDays,
     this.date,
     this.formattedDate,
     this.dayOfWeek,
@@ -23,20 +27,35 @@ class PatientSchedule {
   factory PatientSchedule.fromJson(Map<String, dynamic> json) {
     print('📦 PatientSchedule.fromJson: ${json.keys}');
 
-    // Безопасное преобразование data
-    List<Activity> activitiesList = [];
+    // Определяем формат данных по наличию total_days
+    bool isGrouped = json.containsKey('total_days');
+    print('📌 Формат данных: ${isGrouped ? 'сгруппированный' : 'плоский'}');
+
+    List<dynamic> parsedData = [];
+
     if (json['data'] != null && json['data'] is List) {
-      activitiesList = (json['data'] as List)
-          .map((item) => Activity.fromJson(item))
-          .toList();
+      if (isGrouped) {
+        // Сгруппированный формат (для period=all)
+        parsedData = (json['data'] as List)
+            .map((item) => ScheduleDay.fromJson(item))
+            .toList();
+        print('📅 Загружено дней: ${parsedData.length}');
+      } else {
+        // Плоский формат (для today/tomorrow)
+        parsedData = (json['data'] as List)
+            .map((item) => Activity.fromJson(item))
+            .toList();
+        print('📅 Загружено активностей: ${parsedData.length}');
+      }
     }
 
     return PatientSchedule(
       success: json['success'] ?? false,
-      data: activitiesList,
-      total: _parseInt(json['total']),
+      data: parsedData,
+      total: _parseInt(json['total'] ?? json['total_days']),
       userId: _parseInt(json['user_id']),
       timestamp: _parseInt(json['timestamp']),
+      totalDays: _parseInt(json['total_days']),
       date: json['date']?.toString(),
       formattedDate: json['formatted_date']?.toString(),
       dayOfWeek: json['day_of_week']?.toString(),
@@ -57,59 +76,141 @@ class PatientSchedule {
     return 0;
   }
 
-  /// Получить все уникальные даты из активностей
-  List<String> get availableDates {
-    Set<String> dates = {};
-    for (var activity in data) {
-      if (activity.date.isNotEmpty) {
-        dates.add(activity.date);
-      }
-    }
-    return dates.toList()..sort();
+  /// Получить все активности (для today/tomorrow)
+  List<Activity> get flatActivities {
+    return data.whereType<Activity>().toList();
   }
 
-  /// Получить активности для конкретной даты
-  List<Activity> getActivitiesForDate(String targetDate) {
-    return data.where((activity) => activity.date == targetDate).toList();
+  /// Получить все дни (для all)
+  List<ScheduleDay> get days {
+    return data.whereType<ScheduleDay>().toList();
   }
 
-  /// Получить активности, сгруппированные по датам
-  Map<String, List<Activity>> get groupedByDate {
-    final Map<String, List<Activity>> grouped = {};
-    for (var activity in data) {
-      if (activity.date.isEmpty) continue;
-      if (!grouped.containsKey(activity.date)) {
-        grouped[activity.date] = [];
-      }
-      grouped[activity.date]!.add(activity);
+  /// Проверить, сгруппировано ли по дням
+  bool get isGroupedByDay => data.isNotEmpty && data.first is ScheduleDay;
+}
+
+/// Модель дня расписания (для period=all)
+class ScheduleDay {
+  final String date;
+  final String formattedDate;
+  final String dayOfWeek;
+  final List<PatientInfo> patients;
+
+  ScheduleDay({
+    required this.date,
+    required this.formattedDate,
+    required this.dayOfWeek,
+    required this.patients,
+  });
+
+  factory ScheduleDay.fromJson(Map<String, dynamic> json) {
+    print('📅 ScheduleDay.fromJson: ${json['date']}');
+
+    var patientsList = <PatientInfo>[];
+    if (json['patients'] != null && json['patients'] is List) {
+      patientsList = (json['patients'] as List)
+          .map((item) => PatientInfo.fromJson(item))
+          .toList();
+      print('   Пациентов в этот день: ${patientsList.length}');
     }
 
-    // Сортируем активности в каждой дате
-    grouped.forEach((key, list) {
-      list.sort((a, b) => a.sortTime.compareTo(b.sortTime));
-    });
-
-    return grouped;
+    return ScheduleDay(
+      date: json['date'] ?? '',
+      formattedDate: json['formatted_date'] ?? '',
+      dayOfWeek: json['day_of_week'] ?? '',
+      patients: patientsList,
+    );
   }
 
-  /// Получить активности, сгруппированные по пациентам для конкретной даты
-  Map<String, List<Activity>> getActivitiesByPatientForDate(String date) {
-    final Map<String, List<Activity>> grouped = {};
-    final activities = getActivitiesForDate(date);
-
-    for (var activity in activities) {
-      if (!grouped.containsKey(activity.patientGuid)) {
-        grouped[activity.patientGuid] = [];
+  /// Получить все активности в этом дне (упрощенные)
+  List<SimpleActivity> get simpleActivities {
+    List<SimpleActivity> result = [];
+    for (var patient in patients) {
+      for (var activity in patient.activities) {
+        result.add(SimpleActivity(
+          time: activity.time,
+          service: activity.service,
+        ));
       }
-      grouped[activity.patientGuid]!.add(activity);
+    }
+    // Сортируем по времени
+    result.sort((a, b) => a.sortTime.compareTo(b.sortTime));
+    return result;
+  }
+
+  /// Получить все активности в этом дне (полные)
+  List<Activity> get fullActivities {
+    List<Activity> result = [];
+    for (var patient in patients) {
+      result.addAll(patient.activities);
+    }
+    return result;
+  }
+}
+
+/// Упрощенная модель для отображения в списке "Все дни"
+class SimpleActivity {
+  final String time;
+  final String service;
+
+  SimpleActivity({
+    required this.time,
+    required this.service,
+  });
+
+  int get sortTime {
+    try {
+      List<String> parts = time.split(':');
+      if (parts.length >= 2) {
+        return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+      }
+    } catch (e) {}
+    return 0;
+  }
+}
+
+/// Модель информации о пациенте
+class PatientInfo {
+  final String patientGuid;
+  final String patientName;
+  final String childName;
+  final String relation;
+  final List<Activity> activities;
+
+  PatientInfo({
+    required this.patientGuid,
+    required this.patientName,
+    required this.childName,
+    required this.relation,
+    required this.activities,
+  });
+
+  factory PatientInfo.fromJson(Map<String, dynamic> json) {
+    print('👤 PatientInfo.fromJson: ${json['patient_name']}');
+
+    var activitiesList = <Activity>[];
+    if (json['activities'] != null && json['activities'] is List) {
+      activitiesList = (json['activities'] as List)
+          .map((item) => Activity.fromJson(item))
+          .toList();
     }
 
-    // Сортируем активности для каждого пациента
-    grouped.forEach((key, list) {
-      list.sort((a, b) => a.sortTime.compareTo(b.sortTime));
-    });
+    return PatientInfo(
+      patientGuid: json['patient_guid']?.toString() ?? '',
+      patientName: json['patient_name']?.toString() ?? '',
+      childName: json['child_name']?.toString() ?? '',
+      relation: json['relation']?.toString() ?? '',
+      activities: activitiesList,
+    );
+  }
 
-    return grouped;
+  /// Получить инициалы для аватара
+  String get initials {
+    if (childName.isNotEmpty) {
+      return childName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join();
+    }
+    return patientName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join();
   }
 }
 
@@ -128,7 +229,6 @@ class Activity {
   final String cabinet;
   final String service;
   final int duration;
-  final String date; // Дата, которую мы извлечем из API
 
   Activity({
     required this.id,
@@ -144,21 +244,10 @@ class Activity {
     required this.cabinet,
     required this.service,
     required this.duration,
-    required this.date,
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) {
-    print('🏥 Activity.fromJson: ${json['service']}');
-
-    // Пытаемся получить дату из разных источников
-    String activityDate = '';
-
-    // Вариант 1: если есть поле date
-    if (json.containsKey('date') && json['date'] != null) {
-      activityDate = json['date'].toString();
-    }
-    // Вариант 2: если есть поле date в корне (для period=all его нет)
-    // Вариант 3: пока пустая строка - будем группировать позже
+    print('🏥 Activity.fromJson: ${json['service'] ?? 'null'}');
 
     return Activity(
       id: _parseInt(json['id']),
@@ -174,7 +263,6 @@ class Activity {
       cabinet: json['cabinet']?.toString() ?? '',
       service: json['service']?.toString() ?? '',
       duration: _parseInt(json['duration']),
-      date: activityDate,
     );
   }
 
@@ -204,7 +292,7 @@ class Activity {
   /// Получить время для сортировки (в минутах от полуночи)
   int get sortTime {
     try {
-      List<String> parts = timeStart.split(':');
+      List<String> parts = time.split(':');
       if (parts.length >= 2) {
         return int.parse(parts[0]) * 60 + int.parse(parts[1]);
       }
@@ -246,12 +334,6 @@ class Employees {
     if (additional != null) list.add(additional!);
     return list;
   }
-
-  /// Получить текстовое представление сотрудников
-  String get employeesText {
-    if (additional == null) return main.name;
-    return '${main.name} + ${additional!.name}';
-  }
 }
 
 /// Модель сотрудника
@@ -269,38 +351,5 @@ class Employee {
       name: json['name']?.toString() ?? '',
       guid: json['guid']?.toString() ?? '',
     );
-  }
-}
-
-/// Расширения для списка активностей
-extension ActivityListExtension on List<Activity> {
-  /// Сортировка по времени
-  List<Activity> sortByTime() {
-    sort((a, b) => a.sortTime.compareTo(b.sortTime));
-    return this;
-  }
-
-  /// Группировка по пациентам
-  Map<String, List<Activity>> groupByPatient() {
-    final Map<String, List<Activity>> grouped = {};
-    for (var activity in this) {
-      if (!grouped.containsKey(activity.patientGuid)) {
-        grouped[activity.patientGuid] = [];
-      }
-      grouped[activity.patientGuid]!.add(activity);
-    }
-    return grouped;
-  }
-
-  /// Группировка по датам (если есть дата)
-  Map<String, List<Activity>> groupByDate() {
-    final Map<String, List<Activity>> grouped = {};
-    for (var activity in this) {
-      if (!grouped.containsKey(activity.date)) {
-        grouped[activity.date] = [];
-      }
-      grouped[activity.date]!.add(activity);
-    }
-    return grouped;
   }
 }
