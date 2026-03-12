@@ -1,7 +1,7 @@
 class DailySchedule {
   final int id;
   final String title;
-  final String startTime;
+  final String startTime; // Это время начала дня (обычно 08:00)
   final int userId;
   final List<Activity> activities;
 
@@ -15,131 +15,99 @@ class DailySchedule {
 
   factory DailySchedule.fromJson(Map<String, dynamic> json) {
     print('📦 DailySchedule.fromJson START');
-    print('   json keys: ${json.keys}');
 
-    try {
-      // БЕЗОПАСНОЕ ПРЕОБРАЗОВАНИЕ id
-      int scheduleId;
+    // Безопасное преобразование id
+    int scheduleId = 0;
+    if (json['id'] != null) {
       if (json['id'] is int) {
         scheduleId = json['id'];
       } else if (json['id'] is String) {
         scheduleId = int.tryParse(json['id']) ?? 0;
-      } else {
-        scheduleId = 0;
       }
+    }
 
-      // БЕЗОПАСНОЕ ПРЕОБРАЗОВАНИЕ frontuser
-      int userId;
+    // Безопасное преобразование userId
+    int userId = 0;
+    if (json['frontuser'] != null) {
       if (json['frontuser'] is int) {
         userId = json['frontuser'];
       } else if (json['frontuser'] is String) {
         userId = int.tryParse(json['frontuser']) ?? 0;
-      } else {
-        userId = 0;
       }
-
-      var activitiesList = <Activity>[];
-      if (json['activities'] != null && json['activities'] is List) {
-        activitiesList = (json['activities'] as List)
-            .map((item) => Activity.fromJson(item))
-            .toList();
-      }
-
-      return DailySchedule(
-        id: scheduleId,
-        title: json['p_name']?.toString() ?? 'Расписание',
-        startTime: json['start_h']?.toString() ?? '08:00',
-        userId: userId,
-        activities: activitiesList,
-      );
-    } catch (e, stackTrace) {
-      print('❌ ОШИБКА В DailySchedule.fromJson: $e');
-      print('📚 Stack trace: $stackTrace');
-      print('📦 Входные данные: $json');
-      rethrow;
     }
+
+    // Создаем активности
+    var activitiesList = <Activity>[];
+    if (json['activities'] != null && json['activities'] is List) {
+      activitiesList = (json['activities'] as List)
+          .map((item) => Activity.fromJson(item))
+          .toList();
+    }
+
+    return DailySchedule(
+      id: scheduleId,
+      title: json['p_name']?.toString() ?? 'Расписание',
+      startTime: json['start_h']?.toString() ?? '08:00',
+      userId: userId,
+      activities: activitiesList,
+    );
   }
 
-  // Получаем даты из заголовка расписания
-  String get scheduleDate {
-    // Пример: "Расписание 18.02.2026 - 20.02.2026 для пациента: ..."
-    final regex = RegExp(r'(\d{2}\.\d{2}\.\d{4})');
-    final match = regex.firstMatch(title);
-    return match?.group(1) ?? 'Неизвестно';
-  }
-
-  // Получаем список всех дат из заголовка
-  List<String> get allDates {
-    final regex = RegExp(r'(\d{2}\.\d{2}\.\d{4})');
-    final matches = regex.allMatches(title).toList();
-    return matches
-        .map((m) => m.group(1) ?? '')
-        .where((d) => d.isNotEmpty)
-        .toList();
-  }
-
-  // Получаем имя пациента
+  // Получаем имя пациента из заголовка
   String get patientName {
     final parts = title.split('для пациента: ');
     return parts.length > 1 ? parts[1].trim() : 'Пациент';
   }
 
-  // Группируем активности по дням на основе id_cell
+  // Группируем активности по дням на основе id_cell и дат из активностей
   Map<String, List<Activity>> get activitiesByDay {
-    print('📅 НАЧАЛО ГРУППИРОВКИ. Всего активностей: ${activities.length}');
+    print('📅 Группировка активностей по дням...');
+    print('   Всего активностей: ${activities.length}');
 
     final Map<String, List<Activity>> grouped = {};
-    final dates = allDates;
-    print('   Даты из заголовка: $dates');
 
-    for (var i = 0; i < activities.length; i++) {
-      final activity = activities[i];
+    // Сначала собираем все уникальные даты из активностей
+    Set<String> uniqueDates = {};
+    for (var activity in activities) {
+      // Извлекаем дату из start_t? Но в данных нет даты в активности.
+      // Значит, дата определяется по id_cell
 
-      print('   --- Активность $i ---');
-      print(
-          '      cellId: ${activity.cellId} (${activity.cellId.runtimeType})');
-      print(
-          '      startTime: ${activity.startTime} (${activity.startTime.runtimeType})');
-      print(
-          '      duration: ${activity.duration} (${activity.duration.runtimeType})');
-      print('      name: ${activity.name} (${activity.name.runtimeType})');
+      // Определяем день по id_cell
+      int dayIndex = (activity.cellId ~/ 1000) - 1;
+      if (dayIndex < 0) dayIndex = 0;
 
-      // Проверяем тип cellId
-      if (activity.cellId is! int) {
-        print(
-            '❌ ОШИБКА: cellId не int! Фактический тип: ${activity.cellId.runtimeType}');
-        print('   Значение: ${activity.cellId}');
+      // Создаем ключ для дня (пока просто "День X")
+      String dayKey = 'День ${dayIndex + 1}';
+
+      if (!grouped.containsKey(dayKey)) {
+        grouped[dayKey] = [];
       }
-
-      try {
-        int dayIndex = (activity.cellId ~/ 1000) - 1;
-        if (dayIndex < 0) dayIndex = 0;
-
-        String dayKey =
-            dayIndex < dates.length ? dates[dayIndex] : 'День ${dayIndex + 1}';
-        print('      dayIndex: $dayIndex, dayKey: $dayKey');
-
-        if (!grouped.containsKey(dayKey)) {
-          grouped[dayKey] = [];
-        }
-        grouped[dayKey]!.add(activity);
-      } catch (e, stack) {
-        print('❌ ОШИБКА ПРИ ГРУППИРОВКЕ АКТИВНОСТИ $i');
-        print('   cellId: ${activity.cellId} (${activity.cellId.runtimeType})');
-        print('   Ошибка: $e');
-        print('   Стек: $stack');
-      }
+      grouped[dayKey]!.add(activity);
     }
 
-    print('📊 РЕЗУЛЬТАТ ГРУППИРОВКИ: ${grouped.length} дней');
+    // Сортируем активности в каждом дне по времени
+    grouped.forEach((key, list) {
+      list.sort((a, b) => a.startTime.compareTo(b.startTime));
+    });
+
+    print('📊 Результат группировки: ${grouped.length} дней');
     grouped.forEach((key, list) {
       print('   $key: ${list.length} активностей');
+      // Покажем первую активность для примера
+      if (list.isNotEmpty) {
+        print('      Пример: ${list.first.name} в ${list.first.startTime}');
+      }
     });
 
     return grouped;
   }
 
-  // Получаем количество дней
+  // Если нужно получить массив дат для отображения
+  List<String> get dayLabels {
+    return activitiesByDay.keys.toList();
+  }
+
+  // Количество дней
   int get daysCount => activitiesByDay.length;
 }
 

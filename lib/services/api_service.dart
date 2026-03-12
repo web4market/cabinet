@@ -371,10 +371,13 @@ class ApiService {
     }
   }
 
-  // ПОЛУЧЕНИЕ РАСПИСАНИЯ - ИСПРАВЛЕННАЯ ВЕРСИЯ
-  Future<Map<String, dynamic>> getSchedule() async {
+  // ========== РАСПИСАНИЕ (ОБНОВЛЕНО) ==========
+
+  /// Получить расписание с возможностью фильтрации по периоду
+  Future<Map<String, dynamic>> getSchedule({String period = 'all'}) async {
     try {
       print('🔍 getSchedule() START');
+      print('📌 Период: $period');
 
       final token = await getToken();
       if (token == null) {
@@ -386,46 +389,23 @@ class ApiService {
         };
       }
 
-      print('📤 Запрос к /api/schedule');
-      print('📤 Headers: Authorization: Bearer ${token.substring(0, 20)}...');
+      print('📤 Запрос к /api/schedule с period=$period');
 
       final response = await _dio.get(
-        '/schedule', // Простой запрос без параметров
+        '/schedule',
+        queryParameters: {'period': period},
         options: Options(
           headers: {
             'Authorization': 'Bearer $token',
-            'Accept': 'application/json',
+            'Accept': 'application/json'
           },
         ),
       );
 
       print('📥 Статус ответа: ${response.statusCode}');
       print('📥 Тип данных: ${response.data.runtimeType}');
-      print('📥 Данные: ${response.data}');
 
-      if (response.statusCode == 200) {
-        if (response.data is Map) {
-          final data = response.data as Map<String, dynamic>;
-          print('📊 success: ${data['success']}');
-          print('📊 total: ${data['total']}');
-
-          if (data['data'] is List) {
-            print('📊 data длина: ${(data['data'] as List).length}');
-          }
-
-          return data;
-        } else if (response.data is String) {
-          try {
-            final parsed = jsonDecode(response.data);
-            return parsed as Map<String, dynamic>;
-          } catch (e) {
-            print('❌ Ошибка парсинга JSON: $e');
-            return {'success': false, 'message': 'Ошибка формата данных'};
-          }
-        }
-      }
-
-      return {'success': false, 'message': 'Ошибка загрузки расписания'};
+      return response.data;
     } on DioException catch (e) {
       print('❌ DIO Ошибка: ${e.message}');
       if (e.response?.statusCode == 401) {
@@ -436,11 +416,23 @@ class ApiService {
           'needAuth': true
         };
       }
-      return {'success': false, 'message': 'Ошибка соединения: ${e.message}'};
-    } catch (e) {
-      print('❌ Неизвестная ошибка: $e');
-      return {'success': false, 'message': 'Ошибка: $e'};
+      return {'success': false, 'message': 'Ошибка загрузки расписания'};
     }
+  }
+
+  /// Получить расписание на сегодня (упрощенный метод)
+  Future<Map<String, dynamic>> getTodaySchedule() async {
+    return getSchedule(period: 'today');
+  }
+
+  /// Получить расписание на завтра (упрощенный метод)
+  Future<Map<String, dynamic>> getTomorrowSchedule() async {
+    return getSchedule(period: 'tomorrow');
+  }
+
+  /// Получить всё расписание (упрощенный метод)
+  Future<Map<String, dynamic>> getAllSchedule() async {
+    return getSchedule(period: 'all');
   }
 
   // ПОЛУЧЕНИЕ ВСЕХ КУРСОВ

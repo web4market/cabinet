@@ -1,222 +1,306 @@
-class ScheduleModel {
-  final int id;
-  final String title;
-  final String startTime;
+// Модель расписания для пациента
+class PatientSchedule {
+  final bool success;
+  final List<Activity> data;
+  final int total;
   final int userId;
-  final List<ActivityModel> activities;
+  final int timestamp;
+  final String? date; // для period=today
+  final String? formattedDate; // для period=today
+  final String? dayOfWeek; // для period=today
 
-  ScheduleModel({
-    required this.id,
-    required this.title,
-    required this.startTime,
+  PatientSchedule({
+    required this.success,
+    required this.data,
+    required this.total,
     required this.userId,
-    required this.activities,
+    required this.timestamp,
+    this.date,
+    this.formattedDate,
+    this.dayOfWeek,
   });
 
-  factory ScheduleModel.fromJson(Map<String, dynamic> json) {
-    print('📦 ScheduleModel.fromJson: $json');
+  factory PatientSchedule.fromJson(Map<String, dynamic> json) {
+    print('📦 PatientSchedule.fromJson: ${json.keys}');
 
-    // Безопасное преобразование id в int
-    int scheduleId = 0;
-    if (json['id'] != null) {
-      if (json['id'] is int) {
-        scheduleId = json['id'];
-      } else if (json['id'] is String) {
-        scheduleId = int.tryParse(json['id']) ?? 0;
-      }
-    }
-
-    // Безопасное преобразование frontuser в int
-    int userId = 0;
-    if (json['frontuser'] != null) {
-      if (json['frontuser'] is int) {
-        userId = json['frontuser'];
-      } else if (json['frontuser'] is String) {
-        userId = int.tryParse(json['frontuser']) ?? 0;
-      }
-    }
-
-    var activitiesList = <ActivityModel>[];
-    if (json['activities'] != null && json['activities'] is List) {
-      activitiesList = (json['activities'] as List)
-          .map((item) => ActivityModel.fromJson(item))
+    // Безопасное преобразование data
+    List<Activity> activitiesList = [];
+    if (json['data'] != null && json['data'] is List) {
+      activitiesList = (json['data'] as List)
+          .map((item) => Activity.fromJson(item))
           .toList();
     }
 
-    return ScheduleModel(
-      id: scheduleId,
-      title: json['p_name']?.toString() ?? 'Расписание',
-      startTime: json['start_h']?.toString() ?? '08:00',
-      userId: userId,
-      activities: activitiesList,
+    return PatientSchedule(
+      success: json['success'] ?? false,
+      data: activitiesList,
+      total: _parseInt(json['total']),
+      userId: _parseInt(json['user_id']),
+      timestamp: _parseInt(json['timestamp']),
+      date: json['date']?.toString(),
+      formattedDate: json['formatted_date']?.toString(),
+      dayOfWeek: json['day_of_week']?.toString(),
     );
   }
 
-  // Получаем даты из заголовка расписания
-  String get scheduleDate {
-    final regex = RegExp(r'(\d{2}\.\d{2}\.\d{4})');
-    final match = regex.firstMatch(title);
-    return match?.group(1) ?? 'Неизвестно';
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      try {
+        return int.parse(value);
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
   }
 
-  // Получаем имя пациента
-  String get patientName {
-    final parts = title.split('для пациента: ');
-    return parts.length > 1 ? parts[1].trim() : 'Пациент';
+  /// Получить все уникальные даты из активностей
+  List<String> get availableDates {
+    Set<String> dates = {};
+    for (var activity in data) {
+      if (activity.date.isNotEmpty) {
+        dates.add(activity.date);
+      }
+    }
+    return dates.toList()..sort();
+  }
+
+  /// Получить активности для конкретной даты
+  List<Activity> getActivitiesForDate(String targetDate) {
+    return data.where((activity) => activity.date == targetDate).toList();
+  }
+
+  /// Получить активности, сгруппированные по датам
+  Map<String, List<Activity>> get groupedByDate {
+    final Map<String, List<Activity>> grouped = {};
+    for (var activity in data) {
+      if (activity.date.isEmpty) continue;
+      if (!grouped.containsKey(activity.date)) {
+        grouped[activity.date] = [];
+      }
+      grouped[activity.date]!.add(activity);
+    }
+
+    // Сортируем активности в каждой дате
+    grouped.forEach((key, list) {
+      list.sort((a, b) => a.sortTime.compareTo(b.sortTime));
+    });
+
+    return grouped;
+  }
+
+  /// Получить активности, сгруппированные по пациентам для конкретной даты
+  Map<String, List<Activity>> getActivitiesByPatientForDate(String date) {
+    final Map<String, List<Activity>> grouped = {};
+    final activities = getActivitiesForDate(date);
+
+    for (var activity in activities) {
+      if (!grouped.containsKey(activity.patientGuid)) {
+        grouped[activity.patientGuid] = [];
+      }
+      grouped[activity.patientGuid]!.add(activity);
+    }
+
+    // Сортируем активности для каждого пациента
+    grouped.forEach((key, list) {
+      list.sort((a, b) => a.sortTime.compareTo(b.sortTime));
+    });
+
+    return grouped;
   }
 }
 
-class ActivityModel {
+/// Модель активности (занятия)
+class Activity {
   final int id;
-  final int? activityId;
-  final int cellId;
-  final int merge;
-  final String startTime;
-  final String endTime;
-  final String textInCell;
+  final String patientGuid;
+  final String patientName;
+  final String childName;
+  final String relation;
+  final String time;
+  final String timeRange;
+  final String timeStart;
+  final String timeEnd;
+  final Employees employees;
+  final String cabinet;
+  final String service;
   final int duration;
-  final String name;
-  final String description;
+  final String date; // Дата, которую мы извлечем из API
 
-  ActivityModel({
+  Activity({
     required this.id,
-    this.activityId,
-    required this.cellId,
-    required this.merge,
-    required this.startTime,
-    required this.endTime,
-    required this.textInCell,
+    required this.patientGuid,
+    required this.patientName,
+    required this.childName,
+    required this.relation,
+    required this.time,
+    required this.timeRange,
+    required this.timeStart,
+    required this.timeEnd,
+    required this.employees,
+    required this.cabinet,
+    required this.service,
     required this.duration,
-    required this.name,
-    required this.description,
+    required this.date,
   });
 
-  factory ActivityModel.fromJson(Map<String, dynamic> json) {
-    print('📦 ActivityModel.fromJson: $json');
+  factory Activity.fromJson(Map<String, dynamic> json) {
+    print('🏥 Activity.fromJson: ${json['service']}');
 
-    // Безопасное преобразование id в int
-    int activityId = 0;
-    if (json['id'] != null) {
-      if (json['id'] is int) {
-        activityId = json['id'];
-      } else if (json['id'] is String) {
-        activityId = int.tryParse(json['id']) ?? 0;
-      }
+    // Пытаемся получить дату из разных источников
+    String activityDate = '';
+
+    // Вариант 1: если есть поле date
+    if (json.containsKey('date') && json['date'] != null) {
+      activityDate = json['date'].toString();
     }
+    // Вариант 2: если есть поле date в корне (для period=all его нет)
+    // Вариант 3: пока пустая строка - будем группировать позже
 
-    // Безопасное преобразование id_activity в int?
-    int? idActivity;
-    if (json['id_activity'] != null) {
-      if (json['id_activity'] is int) {
-        idActivity = json['id_activity'];
-      } else if (json['id_activity'] is String) {
-        idActivity = int.tryParse(json['id_activity']);
-      }
-    }
-
-    // Безопасное преобразование id_cell в int
-    int cellId = 0;
-    if (json['id_cell'] != null) {
-      if (json['id_cell'] is int) {
-        cellId = json['id_cell'];
-      } else if (json['id_cell'] is String) {
-        cellId = int.tryParse(json['id_cell']) ?? 0;
-      }
-    }
-
-    // Безопасное преобразование merge в int
-    int merge = 0;
-    if (json['merge'] != null) {
-      if (json['merge'] is int) {
-        merge = json['merge'];
-      } else if (json['merge'] is String) {
-        merge = int.tryParse(json['merge']) ?? 0;
-      }
-    }
-
-    // Безопасное преобразование duration в int
-    int duration = 0;
-    if (json['duration'] != null) {
-      if (json['duration'] is int) {
-        duration = json['duration'];
-      } else if (json['duration'] is String) {
-        duration = int.tryParse(json['duration']) ?? 0;
-      }
-    }
-
-    return ActivityModel(
-      id: activityId,
-      activityId: idActivity,
-      cellId: cellId,
-      merge: merge,
-      startTime: json['start_t']?.toString() ?? '--:--',
-      endTime: json['end_t']?.toString() ?? '--:--',
-      textInCell: _cleanHtmlText(json['textincell']?.toString() ?? ''),
-      duration: duration,
-      name: json['act_name']?.toString() ?? 'Занятие',
-      description: _cleanHtmlText(json['description']?.toString() ?? ''),
+    return Activity(
+      id: _parseInt(json['id']),
+      patientGuid: json['patient_guid']?.toString() ?? '',
+      patientName: json['patient_name']?.toString() ?? '',
+      childName: json['child_name']?.toString() ?? '',
+      relation: json['relation']?.toString() ?? '',
+      time: json['time']?.toString() ?? '',
+      timeRange: json['time_range']?.toString() ?? '',
+      timeStart: json['time_start']?.toString() ?? '',
+      timeEnd: json['time_end']?.toString() ?? '',
+      employees: Employees.fromJson(json['employees'] ?? {}),
+      cabinet: json['cabinet']?.toString() ?? '',
+      service: json['service']?.toString() ?? '',
+      duration: _parseInt(json['duration']),
+      date: activityDate,
     );
   }
 
-  // Очистка HTML тегов из текста
-  static String _cleanHtmlText(String html) {
-    // Удаляем HTML теги
-    // 1. Заменяем <br>, <br/>, <br /> на \n
-    String text =
-        html.replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n');
-
-    // 2. Заменяем <p> на \n\n (двойной перенос для абзацев)
-    text = text.replaceAll(RegExp(r'<p>', caseSensitive: false), '\n\n');
-
-    // 3. Заменяем </p> на \n (иногда нужен только перенос)
-    text = text.replaceAll(RegExp(r'</p>', caseSensitive: false), '\n');
-
-    // 4. Заменяем <div> на \n
-    text = text.replaceAll(RegExp(r'<div>', caseSensitive: false), '\n');
-    text = text.replaceAll(RegExp(r'</div>', caseSensitive: false), '');
-
-    // 5. Заменяем <li> на • (маркер списка)
-    text = text.replaceAll(RegExp(r'<li>', caseSensitive: false), '\n• ');
-    text = text.replaceAll(RegExp(r'</li>', caseSensitive: false), '');
-
-    text = text.replaceAll(RegExp(r'<[^>]*>'), ' ');
-    // Заменяем множественные пробелы на один
-    text = text.replaceAll(RegExp(r'\s+'), ' ');
-    // Декодируем HTML сущности
-    text = text.replaceAll('&nbsp;', ' ');
-    text = text.replaceAll('&amp;', '&');
-    text = text.replaceAll('&lt;', '<');
-    text = text.replaceAll('&gt;', '>');
-    text = text.replaceAll('&quot;', '"');
-    text = text.replaceAll('&#39;', "'");
-
-    return text.trim();
+  static int _parseInt(dynamic value) {
+    if (value == null) return 0;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      try {
+        return int.parse(value);
+      } catch (e) {
+        return 0;
+      }
+    }
+    return 0;
   }
 
-  String get timeRange => '$startTime - $endTime';
-  String get durationText => '$duration мин';
-
-  String get room {
-    // Пробуем найти кабинет в тексте
-    final roomRegex = RegExp(r'Кабинет\s*(\d+)', caseSensitive: false);
-    final match = roomRegex.firstMatch(textInCell);
-    if (match != null) {
-      return '${match.group(1)}';
-    }
-
-    final lines =
-        textInCell.split(' ').where((l) => l.trim().isNotEmpty).toList();
-    return lines.isNotEmpty ? lines[0].trim() : 'Кабинет не указан';
+  /// Форматированная длительность
+  String get durationText {
+    if (duration <= 0) return '—';
+    return '$duration мин';
   }
 
-  String get specialist {
-    // Ищем специалиста (обычно после слова "Кабинет")
-    final lines =
-        textInCell.split(' ').where((l) => l.trim().isNotEmpty).toList();
-    if (lines.length > 2) {
-      // Пропускаем первое слово (Кабинет ХХХ) и берем остальное
-      return lines.skip(2).join(' ').trim();
+  /// Проверить, есть ли дополнительный сотрудник
+  bool get hasAdditionalEmployee => employees.additional != null;
+
+  /// Получить время для сортировки (в минутах от полуночи)
+  int get sortTime {
+    try {
+      List<String> parts = timeStart.split(':');
+      if (parts.length >= 2) {
+        return int.parse(parts[0]) * 60 + int.parse(parts[1]);
+      }
+    } catch (e) {}
+    return 0;
+  }
+
+  /// Получить инициалы пациента
+  String get initials {
+    if (childName.isNotEmpty) {
+      return childName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join();
     }
-    return 'Специалист не указан';
+    return patientName.split(' ').map((e) => e.isNotEmpty ? e[0] : '').join();
+  }
+}
+
+/// Модель сотрудников
+class Employees {
+  final Employee main;
+  final Employee? additional;
+
+  Employees({
+    required this.main,
+    this.additional,
+  });
+
+  factory Employees.fromJson(Map<String, dynamic> json) {
+    return Employees(
+      main: Employee.fromJson(json['main'] ?? {}),
+      additional: json['additional'] != null
+          ? Employee.fromJson(json['additional'])
+          : null,
+    );
+  }
+
+  /// Получить список всех сотрудников
+  List<Employee> get all {
+    List<Employee> list = [main];
+    if (additional != null) list.add(additional!);
+    return list;
+  }
+
+  /// Получить текстовое представление сотрудников
+  String get employeesText {
+    if (additional == null) return main.name;
+    return '${main.name} + ${additional!.name}';
+  }
+}
+
+/// Модель сотрудника
+class Employee {
+  final String name;
+  final String guid;
+
+  Employee({
+    required this.name,
+    required this.guid,
+  });
+
+  factory Employee.fromJson(Map<String, dynamic> json) {
+    return Employee(
+      name: json['name']?.toString() ?? '',
+      guid: json['guid']?.toString() ?? '',
+    );
+  }
+}
+
+/// Расширения для списка активностей
+extension ActivityListExtension on List<Activity> {
+  /// Сортировка по времени
+  List<Activity> sortByTime() {
+    sort((a, b) => a.sortTime.compareTo(b.sortTime));
+    return this;
+  }
+
+  /// Группировка по пациентам
+  Map<String, List<Activity>> groupByPatient() {
+    final Map<String, List<Activity>> grouped = {};
+    for (var activity in this) {
+      if (!grouped.containsKey(activity.patientGuid)) {
+        grouped[activity.patientGuid] = [];
+      }
+      grouped[activity.patientGuid]!.add(activity);
+    }
+    return grouped;
+  }
+
+  /// Группировка по датам (если есть дата)
+  Map<String, List<Activity>> groupByDate() {
+    final Map<String, List<Activity>> grouped = {};
+    for (var activity in this) {
+      if (!grouped.containsKey(activity.date)) {
+        grouped[activity.date] = [];
+      }
+      grouped[activity.date]!.add(activity);
+    }
+    return grouped;
   }
 }
