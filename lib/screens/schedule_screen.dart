@@ -448,7 +448,7 @@ class _ScheduleScreenState extends State<ScheduleScreen>
                           size: 14, color: Colors.grey.shade500),
                       SizedBox(width: 4),
                       Text(
-                        'Каб. ${activity.cabinet}',
+                        activity.cabinet,
                         style: TextStyle(
                           fontSize: 13,
                           color: Colors.grey.shade600,
@@ -508,8 +508,9 @@ class _ScheduleScreenState extends State<ScheduleScreen>
             _buildDetailRow('Длительность', activity.durationText),
             _buildDetailRow('Специалист', activity.employees.main.name),
             if (activity.hasAdditionalEmployee)
-              _buildDetailRow('Ассистент', activity.employees.additional!.name),
-            _buildDetailRow('Кабинет', 'Каб. ${activity.cabinet}'),
+              _buildDetailRow(
+                  'Специалист', activity.employees.additional!.name),
+            _buildDetailRow('Кабинет', activity.cabinet),
             SizedBox(height: 20),
             Center(
               child: ElevatedButton(
