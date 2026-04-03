@@ -38,3 +38,33 @@
 ```bash
 git clone https://github.com/web4market/cabinet.git
 cd cabinet
+
+### Структура приложения
+
+lib/
+├── main.dart                 # Точка входа в приложение
+├── screens/                  # Экраны приложения
+│   ├── login_screen.dart     # Авторизация
+│   ├── main_menu_screen.dart # Главное меню
+│   ├── profile_screen.dart   # Профиль пользователя
+│   ├── schedule_screen.dart  # Расписание занятий
+│   ├── courses_screen.dart   # Назначенные курсы
+│   ├── help_screen.dart      # Руководство пользователя
+│   └── forgot_password_screen.dart # Восстановление пароля
+├── models/                   # Модели данных
+│   ├── user_model.dart       # Модель пользователя
+│   ├── schedule_model.dart   # Модель расписания
+│   ├── course_model.dart     # Модель курсов
+│   └── help_section.dart     # Модель разделов помощи
+├── services/                 # Сервисы
+│   ├── api_service.dart      # API-клиент
+│   ├── notification_service.dart # Push-уведомления
+│   └── update_service.dart   # Проверка обновлений
+└── widgets/                  # Переиспользуемые виджеты
+    ├── menu_card.dart        # Карточка меню
+    ├── schedule_card.dart    # Карточка занятия
+    └── retry_widget.dart     # Виджет повторной попытки
+
+Copyright (c) 2026 ЛОЦ Адели-Пенза
+
+Все права защищены. Данное программное обеспечение и сопутствующая документация являются собственностью ЛОЦ "Адели-Пенза". Любое копирование, распространение или использование без письменного разрешения правообладателя запрещено.
