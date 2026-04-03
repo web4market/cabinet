@@ -35,11 +35,10 @@
 
 ### Клонирование репозитория
 
-```bash
 git clone https://github.com/web4market/cabinet.git
 cd cabinet
 
-### Структура приложения
+## Структура проекта
 
 lib/
 ├── main.dart                 # Точка входа в приложение
