@@ -1,16 +1,40 @@
-# cabinet
+# Личный кабинет Адели-Пенза
 
-A new Flutter project.
+Мобильное приложение для клиентов ЛОЦ "Адели-Пенза". Позволяет просматривать расписание занятий, отслеживать назначенные курсы и управлять профилем.
 
-## Getting Started
+## 📱 О приложении
 
-This project is a starting point for a Flutter application.
+Приложение предназначено для родителей и опекунов пациентов ЛОЦ "Адели-Пенза". Оно предоставляет удобный доступ к информации о реабилитационных занятиях и курсах.
 
-A few resources to get you started if this is your first Flutter project:
+### Основные возможности
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+- **🔐 Авторизация** - безопасный вход с использованием логина и пароля
+- **📅 Расписание занятий** - просмотр расписания на сегодня, завтра и на все дни
+- **📚 Назначенные курсы** - отслеживание статуса реабилитационных курсов
+- **👤 Профиль** - управление личными данными и смена пароля
+- **👨‍👩‍👧 Подопечные** - информация о детях и родственниках
+- **🔔 Push-уведомления** - получение уведомлений об изменениях в расписании и статусе курсов
+- **📖 Встроенное руководство** - помощь в использовании приложения
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 🛠 Технологии
+
+- **Flutter** - кросс-платформенная разработка
+- **Dio** - HTTP-клиент для работы с API
+- **Shared Preferences** - хранение локальных данных
+- **Firebase Cloud Messaging** - push-уведомления
+- **Provider** - управление состоянием
+
+## 📦 Установка и запуск
+
+### Системные требования
+
+- **Flutter SDK** - версия 3.0 или выше
+- **Dart SDK** - версия 3.0 или выше
+- **Android Studio** или **VS Code**
+- **Android SDK** (для Android-сборки) или **Xcode** (для iOS)
+
+### Клонирование репозитория
+
+```bash
+git clone https://github.com/web4market/cabinet.git
+cd cabinet
